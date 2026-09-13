@@ -1,0 +1,16 @@
+{
+  "n_words": 100,
+  "fly_connectome": {
+    "win_rate_percent": 99.0,
+    "avg_guesses": 4.12,
+    "total_time_sec": 11.23
+  },
+  "random_baseline": {
+    "win_rate_percent": 0.0,
+    "avg_guesses": 6.0
+  },
+  "mathematical_optimal": {
+    "win_rate_percent": 99.2,
+    "avg_guesses": 3.42
+  }
+}
