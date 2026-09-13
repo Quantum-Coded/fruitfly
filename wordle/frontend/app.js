@@ -53,7 +53,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 // ═══════════════════════════ 3D GRAPHICS (THREE.JS) ═══════════════════════════
 let worldScene, worldCamera, worldRenderer, worldControls;
 let brainScene, brainCamera, brainRenderer, brainControls;
-let flyGroup, flyWings = [], flyLegs = [], carriedTileMesh;
+let flyGroup, flyWings = [], flyLegs = [], carriedTileMesh, carriedCanvas, carriedCtx, carriedTex, lastRenderedCarriedLetter = null;
 let boardTiles3D = []; // 6 rows x 5 cols meshes
 let brainPointsGeometry, brainPointsMesh, brainColorsDefault, brainColorsCurrent, brainActivityHeat, brainColorsResting;
 let activeSpikesMesh, activeSpikesGeo, activeSpikesPositions, activeSpikesColors;
@@ -438,9 +438,14 @@ function create3DFruitFly() {
   });
 
   // 6. Carried Letter Tile (shown when fly carries letter from crate)
+  carriedCanvas = document.createElement('canvas');
+  carriedCanvas.width = 128;
+  carriedCanvas.height = 128;
+  carriedCtx = carriedCanvas.getContext('2d');
+  carriedTex = new THREE.CanvasTexture(carriedCanvas);
   const carriedGeo = new THREE.BoxGeometry(0.35, 0.08, 0.35);
   const carriedMat = new THREE.MeshStandardMaterial({
-    color: 0xdeb887,
+    map: carriedTex,
     roughness: 0.5
   });
   carriedTileMesh = new THREE.Mesh(carriedGeo, carriedMat);
@@ -449,6 +454,27 @@ function create3DFruitFly() {
   flyGroup.add(carriedTileMesh);
 
   worldScene.add(flyGroup);
+}
+
+function updateCarriedTileVisual(letter) {
+  if (!carriedCtx || !carriedTex) return;
+  if (letter === lastRenderedCarriedLetter) return;
+  lastRenderedCarriedLetter = letter;
+
+  carriedCtx.fillStyle = '#deb887';
+  carriedCtx.fillRect(0, 0, 128, 128);
+  carriedCtx.strokeStyle = '#8b5a2b';
+  carriedCtx.lineWidth = 8;
+  carriedCtx.strokeRect(4, 4, 120, 120);
+
+  if (letter) {
+    carriedCtx.fillStyle = '#1e293b';
+    carriedCtx.font = 'bold 76px system-ui, -apple-system, sans-serif';
+    carriedCtx.textAlign = 'center';
+    carriedCtx.textBaseline = 'middle';
+    carriedCtx.fillText(letter, 64, 68);
+  }
+  carriedTex.needsUpdate = true;
 }
 
 function animateWorld() {
@@ -483,9 +509,15 @@ function animateWorld() {
       });
     }
 
-    // Carried Letter Piece Visibility
+    // Carried Letter Piece Visibility & Visual (visible during flight, hides upon touchdown to place)
     if (carriedTileMesh) {
-      carriedTileMesh.visible = !!(STATE.fly.carried_letter || STATE.fly.carriedLetter);
+      const carried = STATE.fly.carried_letter || STATE.fly.carriedLetter;
+      const isCarrying = !!carried;
+      const isPlacing = (STATE.fly.phase === 'PLACING_TILE');
+      carriedTileMesh.visible = isCarrying && !isPlacing;
+      if (isCarrying) {
+        updateCarriedTileVisual(carried);
+      }
     }
   }
 
@@ -813,12 +845,11 @@ function renderFlyGrid() {
           tile.textContent = currentLetters[c];
           tile.className = 'tile tile-filled tile-fly-placed';
           update3DBoardTile(r, c, currentLetters[c], -1);
-        } else if (c === placedCount && (carried || STATE.fly.phase === 'PLACING_TILE')) {
-          // Instant letter display the moment the fly touches the slot!
-          const letterToShow = currentLetters[c] || carried || '';
-          tile.textContent = letterToShow;
+        } else if (c === placedCount && STATE.fly.phase === 'PLACING_TILE' && currentLetters[c]) {
+          // Instant letter display the exact moment the fly touches the slot to place it!
+          tile.textContent = currentLetters[c];
           tile.className = 'tile tile-filled tile-fly-placed';
-          update3DBoardTile(r, c, letterToShow, -1);
+          update3DBoardTile(r, c, currentLetters[c], -1);
         } else {
           tile.textContent = '';
           tile.className = 'tile';
