@@ -794,6 +794,7 @@ body {
 #result-overlay.visible { display: flex; }
 
 .result-card {
+  position: relative;
   background: var(--surface-dark-elevated);
   border: 1px solid var(--hairline-dark);
   border-radius: var(--r-lg);
@@ -831,6 +832,57 @@ body {
   font-weight: 400;
   line-height: 1.5;
   color: var(--body-dark);
+}
+
+/* Result actions row */
+.result-actions {
+  display: flex;
+  gap: var(--sp-sm);
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: var(--sp-xs);
+}
+
+/* Close X button — top-right corner of card */
+.result-close-btn {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  background: transparent;
+  border: 1px solid var(--hairline-dark);
+  color: var(--body-dark);
+  font-size: 16px;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.18s, color 0.18s;
+}
+.result-close-btn:hover {
+  background: var(--ps-blue);
+  color: #fff;
+  border-color: var(--ps-blue);
+}
+
+/* Ghost/secondary button */
+.btn-ghost {
+  background: transparent;
+  border: 1px solid var(--ps-blue);
+  color: var(--ps-blue);
+  padding: var(--sp-sm) var(--sp-md);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  transition: background 0.18s, color 0.18s;
+}
+.btn-ghost:hover {
+  background: var(--ps-blue);
+  color: #fff;
 }
 
 /* ════════════════════════════════════════════════════════════

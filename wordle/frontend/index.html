@@ -233,12 +233,14 @@
   ══════════════════════════════════════════════════════ -->
   <div id="result-overlay" role="dialog" aria-modal="true" aria-labelledby="resultHeadline">
     <div class="result-card">
+      <button class="result-close-btn" id="btnCloseResult" aria-label="Close result card" title="Close">✕</button>
       <div class="result-emoji" id="resultEmoji" aria-hidden="true">🏆</div>
       <h2 class="result-headline" id="resultHeadline">You Win!</h2>
       <p  class="result-sub"     id="resultSub">The fly needed 4 guesses.</p>
-      <button class="btn btn-primary" id="btnPlayAgain" aria-label="Play again">
-        PLAY AGAIN
-      </button>
+      <div class="result-actions">
+        <button class="btn btn-primary" id="btnPlayAgain" aria-label="Play again">PLAY AGAIN</button>
+        <button class="btn btn-ghost"   id="btnDismissResult" aria-label="Close and explore">EXPLORE SITE</button>
+      </div>
     </div>
   </div>
 

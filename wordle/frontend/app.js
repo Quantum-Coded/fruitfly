@@ -12,6 +12,7 @@ const STATE = {
   dopamineLevel: 0.0,
   gameActive: false,
   winner: null,
+  resultDismissed: false,   // true once user manually closes the result card
   
   // Fly State
   fly: {
@@ -987,6 +988,7 @@ function setupDOMListeners() {
     STATE.player.won = false;
     STATE.player.keyStatuses = {};
     STATE.winner = null;
+    STATE.resultDismissed = false;  // allow result card to show for the new game
     updateKeyboardUI();
     renderPlayerGrid();
     renderFlyGrid();
@@ -1022,18 +1024,49 @@ function setupDOMListeners() {
     });
   }
 
-  // Sub-nav link highlighting (purely visual)
+  // ── Sub-nav tab switching ──
+  const sections = {
+    game:    document.getElementById('app-container'),
+    brain:   null, // shown via scroll to right-panel
+    science: null,
+    about:   null
+  };
+
   document.querySelectorAll('.sub-nav-link').forEach(link => {
     link.addEventListener('click', () => {
       document.querySelectorAll('.sub-nav-link').forEach(l => l.classList.remove('active'));
       link.classList.add('active');
+
+      const section = link.dataset.section;
+      if (section === 'game') {
+        document.getElementById('left-panel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } else if (section === 'brain') {
+        document.getElementById('right-panel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } else if (section === 'science') {
+        document.querySelector('.science-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } else if (section === 'about') {
+        // Show a quick info toast linking to GitHub
+        showToast('📖 Visit https://github.com/Quantum-Coded/fruitfly for full details');
+      }
     });
   });
 
   // Close result overlay on backdrop click
   document.getElementById('result-overlay').addEventListener('click', (e) => {
-    if (e.target === document.getElementById('result-overlay')) hideResultOverlay();
+    if (e.target === document.getElementById('result-overlay')) hideResultOverlay(true);
   });
+
+  // Close X button (top-right of card)
+  const btnCloseResult = document.getElementById('btnCloseResult');
+  if (btnCloseResult) {
+    btnCloseResult.addEventListener('click', () => hideResultOverlay(true));
+  }
+
+  // "Explore Site" dismiss button (no new game)
+  const btnDismissResult = document.getElementById('btnDismissResult');
+  if (btnDismissResult) {
+    btnDismissResult.addEventListener('click', () => hideResultOverlay(true));
+  }
 }
 
 function showToast(msg) {
@@ -1049,15 +1082,16 @@ function showToast(msg) {
 function showResultOverlay(emoji, headline, sub) {
   const overlay = document.getElementById('result-overlay');
   if (!overlay) return;
-  // Only show once per game end
-  if (overlay.classList.contains('visible')) return;
+  // Don't re-show if already visible OR if user manually dismissed it
+  if (overlay.classList.contains('visible') || STATE.resultDismissed) return;
   document.getElementById('resultEmoji').textContent = emoji;
   document.getElementById('resultHeadline').textContent = headline;
   document.getElementById('resultSub').textContent = sub;
   overlay.classList.add('visible');
 }
 
-function hideResultOverlay() {
+function hideResultOverlay(byUser = false) {
   const overlay = document.getElementById('result-overlay');
   if (overlay) overlay.classList.remove('visible');
+  if (byUser) STATE.resultDismissed = true;
 }
