@@ -483,29 +483,28 @@ function animateWorld() {
   // Update Fly Position and Heading smoothly
   if (flyGroup && STATE.fly) {
     const targetPos = STATE.fly.pos;
-    flyGroup.position.x += (targetPos.x - flyGroup.position.x) * 0.35;
-    flyGroup.position.y += (targetPos.y + 0.25 - flyGroup.position.y) * 0.35;
-    flyGroup.position.z += (targetPos.z - flyGroup.position.z) * 0.35;
+    flyGroup.position.x += (targetPos.x - flyGroup.position.x) * 0.55;
+    flyGroup.position.y += (targetPos.y + 0.25 - flyGroup.position.y) * 0.55;
+    flyGroup.position.z += (targetPos.z - flyGroup.position.z) * 0.55;
 
     // Smooth shortest-arc heading rotation (prevents any spin-around loops)
     const targetRot = STATE.fly.heading;
     let diffRot = targetRot - flyGroup.rotation.y;
     while (diffRot > Math.PI) diffRot -= Math.PI * 2;
     while (diffRot < -Math.PI) diffRot += Math.PI * 2;
-    flyGroup.rotation.y += diffRot * 0.35;
+    flyGroup.rotation.y += diffRot * 0.55;
 
-    // Wing Flutter Animation
+    // Wing Flutter Animation (fast buzzing frequency)
     if (flyWings.length === 2) {
-      const flap = Math.sin(Date.now() * 0.045) * 0.35;
+      const flap = Math.sin(Date.now() * 0.08) * 0.45;
       flyWings[0].rotation.z = -flap;
       flyWings[1].rotation.z = flap;
     }
 
     // Leg Walking Phase
     if (flyLegs.length === 6) {
-      const walkGait = Math.sin(Date.now() * 0.015);
       flyLegs.forEach((leg, i) => {
-        leg.rotation.x = Math.sin(Date.now() * 0.015 + (i % 2) * Math.PI) * 0.25;
+        leg.rotation.x = Math.sin(Date.now() * 0.035 + (i % 2) * Math.PI) * 0.35;
       });
     }
 
@@ -528,7 +527,7 @@ function animateWorld() {
       for (let c = 0; c < 5; c++) {
         const t = boardTiles3D[r][c];
         if (t && t.group && t.targetRotX > 0) {
-          t.group.rotation.x += (t.targetRotX - t.group.rotation.x) * 0.16;
+          t.group.rotation.x += (t.targetRotX - t.group.rotation.x) * 0.26;
           if (Math.abs(t.targetRotX - t.group.rotation.x) < 0.05) {
             t.group.rotation.x = 0;
             t.targetRotX = 0;
@@ -842,11 +841,6 @@ function renderFlyGrid() {
       } else if (r === assembleRowIdx && STATE.gameActive && !STATE.fly.done) {
         // Active row being assembled tile-by-tile
         if (c < placedCount && currentLetters[c]) {
-          tile.textContent = currentLetters[c];
-          tile.className = 'tile tile-filled tile-fly-placed';
-          update3DBoardTile(r, c, currentLetters[c], -1);
-        } else if (c === placedCount && STATE.fly.phase === 'PLACING_TILE' && currentLetters[c]) {
-          // Instant letter display the exact moment the fly touches the slot to place it!
           tile.textContent = currentLetters[c];
           tile.className = 'tile tile-filled tile-fly-placed';
           update3DBoardTile(r, c, currentLetters[c], -1);

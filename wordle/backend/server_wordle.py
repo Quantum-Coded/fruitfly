@@ -250,7 +250,7 @@ def tick_fly_state_machine(dt: float):
         last_fb = fly_env.feedbacks[-1] if fly_env.feedbacks else None
         drive = encoder.encode_guess_and_feedback(last_guess, last_fb, session.dopamine_pulse)
         session.active_neurons, session.telemetry = brain.step(drive, n_substeps=15)
-        if session.phase_timer > 0.75:
+        if session.phase_timer > 0.20:
             plan_fly_guess()
             session.fly_phase = "WALKING_TO_BOX"
             session.phase_timer = 0.0
@@ -268,9 +268,9 @@ def tick_fly_state_machine(dt: float):
         dy = session.fly_target["y"] - session.fly_pos["y"]
         dz = session.fly_target["z"] - session.fly_pos["z"]
         dist = math.hypot(dx, dy, dz)
-        step = 5.2 * dt
+        step = 14.0 * dt
 
-        if dist <= step or dist < 0.22:
+        if dist <= step or dist < 0.40:
             session.fly_pos["x"] = session.fly_target["x"]
             session.fly_pos["y"] = session.fly_target["y"]
             session.fly_pos["z"] = session.fly_target["z"]
@@ -281,7 +281,7 @@ def tick_fly_state_machine(dt: float):
             session.fly_pos["x"] += (dx / dist) * step
             session.fly_pos["y"] += (dy / dist) * step
             session.fly_pos["z"] += (dz / dist) * step
-            session.leg_phase += dt * 10.0
+            session.leg_phase += dt * 25.0
 
     elif session.fly_phase == "PICKING_TILE":
         # Fly grasps the letter piece: Olfactory Receptor Neurons (ORNs) for this letter fire!
@@ -290,9 +290,9 @@ def tick_fly_state_machine(dt: float):
         session.sensory_mode = "NOSE"
         session.sensory_detail = f"Olfactory ORN · Inhaling scent of '{session.carried_letter}' (Antennal Lobe)"
         drive = encoder.encode_single_letter(session.carried_letter, session.current_letter_idx, is_carrying=False)
-        session.active_neurons, session.telemetry = brain.step(drive, n_substeps=20)
+        session.active_neurons, session.telemetry = brain.step(drive, n_substeps=18)
 
-        if session.phase_timer > 0.22:
+        if session.phase_timer > 0.08:
             session.fly_phase = "WALKING_TO_BOARD"
             session.phase_timer = 0.0
             col = session.current_letter_idx
@@ -313,9 +313,9 @@ def tick_fly_state_machine(dt: float):
         dy = session.fly_target["y"] - session.fly_pos["y"]
         dz = session.fly_target["z"] - session.fly_pos["z"]
         dist = math.hypot(dx, dy, dz)
-        step = 5.4 * dt
+        step = 14.5 * dt
 
-        if dist <= step or dist < 0.22:
+        if dist <= step or dist < 0.40:
             session.fly_pos["x"] = session.fly_target["x"]
             session.fly_pos["y"] = session.fly_target["y"]
             session.fly_pos["z"] = session.fly_target["z"]
@@ -328,7 +328,7 @@ def tick_fly_state_machine(dt: float):
             session.fly_pos["x"] += (dx / dist) * step
             session.fly_pos["y"] += (dy / dist) * step
             session.fly_pos["z"] += (dz / dist) * step
-            session.leg_phase += dt * 10.0
+            session.leg_phase += dt * 25.0
 
     elif session.fly_phase == "PLACING_TILE":
         # Places tile into 3D grid slot: Retinotopic placement + confirmation pulse!
@@ -337,9 +337,9 @@ def tick_fly_state_machine(dt: float):
         slot_num = session.current_letter_idx + 1
         session.sensory_detail = f"Slot #{slot_num} Placement · Retinotopic confirmation pulse ('{letter}')"
         drive = encoder.encode_tile_placement(letter, session.current_letter_idx)
-        session.active_neurons, session.telemetry = brain.step(drive, n_substeps=24)
+        session.active_neurons, session.telemetry = brain.step(drive, n_substeps=22)
 
-        if session.phase_timer > 0.18:
+        if session.phase_timer > 0.08:
             session.carried_letter = None
             session.current_letter_idx += 1
             if session.current_letter_idx < 5:
@@ -378,7 +378,7 @@ def tick_fly_state_machine(dt: float):
             drive = encoder.encode_single_tile_reveal(curr_idx, fb_code)
             session.active_neurons, session.telemetry = brain.step(drive, n_substeps=25)
 
-            if session.phase_timer > 0.65:
+            if session.phase_timer > 0.32:
                 session.revealing_letter_idx += 1
                 session.phase_timer = 0.0
         else:
@@ -405,7 +405,7 @@ def tick_fly_state_machine(dt: float):
         session.sensory_detail = "PAM/PPL1 Dopaminergic neurons · Reward reinforcement surge!"
         da_drive = encoder.encode_dopamine_reward(1.0)
         session.active_neurons, session.telemetry = brain.step(da_drive, n_substeps=28)
-        if session.phase_timer > 2.2:
+        if session.phase_timer > 1.2:
             session.fly_phase = "GAME_OVER"
             session.active = False
 
@@ -483,7 +483,7 @@ async def websocket_endpoint(websocket: WebSocket):
             }
 
             await websocket.send_text(json.dumps(payload))
-            await asyncio.sleep(1 / 20)  # 20 Hz
+            await asyncio.sleep(1 / 25)  # 25 Hz
     except WebSocketDisconnect:
         pass
 
