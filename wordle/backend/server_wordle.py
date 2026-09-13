@@ -102,6 +102,8 @@ class GameSession:
         self.leg_phase = 0.0
         self.dopamine_pulse = 0.0
         self.auto_play = False
+        self.revealing_letter_idx = -1
+        self.current_guess_feedbacks = []
 
         # Live telemetry
         self.active_neurons = []
@@ -130,6 +132,8 @@ class GameSession:
         self.placed_letter_idx = 0
         self.carried_letter = None
         self.dopamine_pulse = 0.0
+        self.revealing_letter_idx = -1
+        self.current_guess_feedbacks = []
         self.sensory_mode = "WORKING_MEMORY"
         self.sensory_detail = "Mushroom Body (Kenyon Cells) · Evaluating words"
         print(f"New Game Started! Fly Secret: {self.fly_secret} | Player Secret: {self.player_secret}")
@@ -246,29 +250,30 @@ def tick_fly_state_machine(dt: float):
         last_fb = fly_env.feedbacks[-1] if fly_env.feedbacks else None
         drive = encoder.encode_guess_and_feedback(last_guess, last_fb, session.dopamine_pulse)
         session.active_neurons, session.telemetry = brain.step(drive, n_substeps=15)
-        if session.phase_timer > 0.5:
+        if session.phase_timer > 0.75:
             plan_fly_guess()
             session.fly_phase = "WALKING_TO_BOX"
             session.phase_timer = 0.0
-            session.fly_target = {"x": -2.8, "y": 0.0, "z": 1.2}
+            session.fly_target = {"x": -2.4, "y": 0.25, "z": 1.0}
 
     elif session.fly_phase == "WALKING_TO_BOX":
-        # Fly walks to letter crate: descending motor neurons fire with leg gait
+        # Fly flies/walks to letter crate: descending motor neurons fire with wing & leg locomotion
         session.sensory_mode = "MOTOR"
         next_num = (session.placed_letter_idx or 0) + 1
         session.sensory_detail = f"Locomotion · Fetching letter #{next_num} (Descending Motor Neurons)"
         drive = encoder.encode_motor_walk(session.leg_phase)
-        session.active_neurons, session.telemetry = brain.step(drive, n_substeps=10)
+        session.active_neurons, session.telemetry = brain.step(drive, n_substeps=12)
 
         dx = session.fly_target["x"] - session.fly_pos["x"]
+        dy = session.fly_target["y"] - session.fly_pos["y"]
         dz = session.fly_target["z"] - session.fly_pos["z"]
-        dist = math.hypot(dx, dz)
-        if dist > 0.1:
-            speed = 4.6
+        dist = math.hypot(dx, dy, dz)
+        if dist > 0.12:
+            speed = 4.8
             session.fly_heading = math.atan2(dx, dz)
             session.fly_pos["x"] += (dx / dist) * speed * dt
+            session.fly_pos["y"] += (dy / dist) * speed * dt
             session.fly_pos["z"] += (dz / dist) * speed * dt
-            session.fly_pos["y"] = 0.05 + abs(math.sin(time.time() * 12.0)) * 0.15
             session.leg_phase += dt * 10.0
         else:
             session.fly_phase = "PICKING_TILE"
@@ -281,61 +286,67 @@ def tick_fly_state_machine(dt: float):
         session.sensory_mode = "NOSE"
         session.sensory_detail = f"Olfactory ORN · Inhaling scent of '{session.carried_letter}' (Antennal Lobe)"
         drive = encoder.encode_single_letter(session.carried_letter, session.current_letter_idx, is_carrying=False)
-        session.active_neurons, session.telemetry = brain.step(drive, n_substeps=18)
+        session.active_neurons, session.telemetry = brain.step(drive, n_substeps=20)
 
-        if session.phase_timer > 0.22:
+        if session.phase_timer > 0.25:
             session.fly_phase = "WALKING_TO_BOARD"
             session.phase_timer = 0.0
             col = session.current_letter_idx
-            target_x = -1.4 + col * 0.7
-            target_z = -0.6
-            session.fly_target = {"x": target_x, "y": 0.0, "z": target_z}
+            row = len(fly_env.guesses)
+            target_x = 0.3 + (-1.16 + col * 0.58)
+            target_y = 3.0 - row * 0.58
+            target_z = -0.45
+            session.fly_target = {"x": target_x, "y": target_y, "z": target_z}
 
     elif session.fly_phase == "WALKING_TO_BOARD":
-        # Fly carries letter to board slot: ORN smell + motor navigation firing!
+        # Fly carries letter in 3D flight directly up to board slot: ORN smell + motor navigation firing!
         session.sensory_mode = "NOSE"
         session.sensory_detail = f"Carrying letter '{session.carried_letter}' · ORN smell + Mushroom Body working memory"
         drive = encoder.encode_single_letter(session.carried_letter, session.current_letter_idx, is_carrying=True)
-        session.active_neurons, session.telemetry = brain.step(drive, n_substeps=14)
+        session.active_neurons, session.telemetry = brain.step(drive, n_substeps=16)
 
         dx = session.fly_target["x"] - session.fly_pos["x"]
+        dy = session.fly_target["y"] - session.fly_pos["y"]
         dz = session.fly_target["z"] - session.fly_pos["z"]
-        dist = math.hypot(dx, dz)
-        if dist > 0.1:
-            speed = 4.6
+        dist = math.hypot(dx, dy, dz)
+        if dist > 0.12:
+            speed = 5.0
             session.fly_heading = math.atan2(dx, dz)
             session.fly_pos["x"] += (dx / dist) * speed * dt
+            session.fly_pos["y"] += (dy / dist) * speed * dt
             session.fly_pos["z"] += (dz / dist) * speed * dt
-            session.fly_pos["y"] = 0.05 + abs(math.sin(time.time() * 12.0)) * 0.15
             session.leg_phase += dt * 10.0
         else:
             session.fly_phase = "PLACING_TILE"
             session.phase_timer = 0.0
 
     elif session.fly_phase == "PLACING_TILE":
-        # Places tile into grid slot: Visual sector + ORN smell + motor burst!
+        # Places tile into 3D grid slot: Retinotopic placement + confirmation pulse!
         letter = session.carried_letter or (session.current_guess_letters[session.current_letter_idx] if session.current_letter_idx < len(session.current_guess_letters) else None)
         session.sensory_mode = "PLACEMENT"
         slot_num = session.current_letter_idx + 1
         session.sensory_detail = f"Slot #{slot_num} Placement · Retinotopic confirmation pulse ('{letter}')"
         drive = encoder.encode_tile_placement(letter, session.current_letter_idx)
-        session.active_neurons, session.telemetry = brain.step(drive, n_substeps=22)
+        session.active_neurons, session.telemetry = brain.step(drive, n_substeps=24)
 
-        if session.phase_timer > 0.22:
+        if session.phase_timer > 0.28:
             # Letter placed! Increment placed count so it immediately renders on grid & 3D board
             session.placed_letter_idx = session.current_letter_idx + 1
             session.carried_letter = None
             session.current_letter_idx += 1
             if session.current_letter_idx < 5:
-                # Next letter in word
+                # Next letter in word: fly back to crate
                 session.fly_phase = "WALKING_TO_BOX"
                 session.phase_timer = 0.0
-                session.fly_target = {"x": -2.8, "y": 0.0, "z": 1.2}
+                session.fly_target = {"x": -2.4, "y": 0.25, "z": 1.0}
             else:
                 # Full 5-letter word placed! Step environment and enter REVEALING
                 session.fly_phase = "REVEALING"
                 session.phase_timer = 0.0
+                session.revealing_letter_idx = 0
                 fb, done, count, won = fly_env.step(session.next_guess_word)
+                session.current_guess_feedbacks = fb
+                session.fly_target = {"x": 0.3, "y": 1.6, "z": 1.3}
                 if won:
                     session.dopamine_pulse = 1.0
                     if session.winner is None:
@@ -344,15 +355,26 @@ def tick_fly_state_machine(dt: float):
                     session.dopamine_pulse = 0.0
 
     elif session.fly_phase == "REVEALING":
-        # Flip feedback on board: Optic visual neurons fire in response to green/yellow/gray colors!
-        session.sensory_mode = "EYES"
-        session.sensory_detail = "Optic Lobe (Eyes) · Processing tile color feedback (🟩/🟨/⬜)"
-        fb = fly_env.feedbacks[-1] if fly_env.feedbacks else None
-        drive = encoder.encode_revealing_colors(fb)
-        session.active_neurons, session.telemetry = brain.step(drive, n_substeps=16)
+        # Progressively reveal tile feedback colors letter-by-letter (0..4) with 0.65s per slot!
+        curr_idx = session.revealing_letter_idx
+        fb_list = session.current_guess_feedbacks
+        if 0 <= curr_idx < 5 and fb_list and curr_idx < len(fb_list):
+            fb_code = fb_list[curr_idx]
+            letter_char = session.current_guess_letters[curr_idx] if curr_idx < len(session.current_guess_letters) else '?'
+            color_name = "GREEN (Correct!)" if fb_code == 2 else ("YELLOW (Present)" if fb_code == 1 else "GRAY (Absent)")
+            color_emoji = "🟩" if fb_code == 2 else ("🟨" if fb_code == 1 else "⬜")
 
-        if session.phase_timer > 1.0:
-            session.placed_letter_idx = 0
+            session.sensory_mode = "EYES"
+            session.sensory_detail = f"Optic Lobe (Eyes) · Slot #{curr_idx + 1} '{letter_char}' is {color_emoji} {color_name}"
+
+            drive = encoder.encode_single_tile_reveal(curr_idx, fb_code)
+            session.active_neurons, session.telemetry = brain.step(drive, n_substeps=25)
+
+            if session.phase_timer > 0.65:
+                session.revealing_letter_idx += 1
+                session.phase_timer = 0.0
+        else:
+            # Staggered reveal completed for all 5 letters!
             if fly_env.done:
                 if fly_env.won:
                     session.fly_phase = "DOPAMINE_PULSE"
@@ -361,17 +383,21 @@ def tick_fly_state_machine(dt: float):
                     session.fly_phase = "GAME_OVER"
                     session.active = False
             else:
-                session.fly_target = {"x": 0.0, "y": 0.0, "z": 1.5}
+                # Prepare for next guess
+                session.placed_letter_idx = 0
+                session.current_letter_idx = 0
+                session.revealing_letter_idx = -1
+                session.fly_target = {"x": 0.0, "y": 0.2, "z": 1.4}
                 session.fly_phase = "THINKING"
                 session.phase_timer = 0.0
 
     elif session.fly_phase == "DOPAMINE_PULSE":
         # Reward burst in connectome: PAM/PPL1 dopaminergic neurons fire surge
         session.sensory_mode = "DOPAMINE"
-        session.sensory_detail = "PAM/PPL1 Dopaminergic neurons · Reward reinforcement burst!"
+        session.sensory_detail = "PAM/PPL1 Dopaminergic neurons · Reward reinforcement surge!"
         da_drive = encoder.encode_dopamine_reward(1.0)
-        session.active_neurons, session.telemetry = brain.step(da_drive, n_substeps=25)
-        if session.phase_timer > 2.0:
+        session.active_neurons, session.telemetry = brain.step(da_drive, n_substeps=28)
+        if session.phase_timer > 2.2:
             session.fly_phase = "GAME_OVER"
             session.active = False
 
@@ -420,8 +446,11 @@ async def websocket_endpoint(websocket: WebSocket):
                     "wing_angle": session.wing_angle,
                     "leg_phase": session.leg_phase,
                     "carried_letter": session.carried_letter,
+                    "carriedLetter": session.carried_letter,
                     "current_letter_idx": session.current_letter_idx,
                     "placed_letter_idx": session.placed_letter_idx,
+                    "revealing_letter_idx": session.revealing_letter_idx,
+                    "current_guess_feedbacks": session.current_guess_feedbacks,
                     "current_guess_letters": session.current_guess_letters if session.fly_phase not in ["IDLE", "GAME_OVER"] else [],
                     "guesses": fly_env.guesses,
                     "feedbacks": fly_env.feedbacks,

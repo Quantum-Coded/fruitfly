@@ -374,35 +374,37 @@ body {
 /* HUD overlay */
 .hud-overlay {
   position: absolute;
-  top: 14px;
-  left: 14px;
-  right: 14px;
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
+  inset: 0;
   pointer-events: none;
   z-index: 10;
 }
 
-/* Fly speech bubble — glassmorphism card */
+/* Fly speech bubble — placed bottom-left above ground to never block board */
 .fly-speech-bubble {
-  background: rgba(18,19,20,0.82);
+  position: absolute;
+  bottom: 14px;
+  left: 14px;
+  background: rgba(18,19,20,0.85);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--hairline-dark);
   padding: var(--sp-xs) var(--sp-sm);
   border-radius: var(--r-md);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 400;
   color: var(--body-dark);
   display: flex;
   align-items: center;
   gap: var(--sp-xs);
-  max-width: 340px;
+  max-width: 380px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.45);
 }
 
-/* Tile carried badge — PS Blue pill */
+/* Tile carried badge — top right */
 .fly-target-tile-badge {
+  position: absolute;
+  top: 14px;
+  right: 14px;
   background: var(--ps-blue);
   padding: 6px 14px;
   border-radius: var(--r-full);
@@ -410,16 +412,22 @@ body {
   font-weight: 700;
   letter-spacing: 0.324px;
   color: var(--on-primary);
-  box-shadow: 0 4px 12px rgba(0,112,209,0.4);
+  box-shadow: 0 4px 14px rgba(0,112,209,0.5);
+  animation: badgePop 0.3s ease;
 }
 
-/* Canvas rotate hint */
+@keyframes badgePop {
+  0% { transform: scale(0.8); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* Canvas rotate hint — bottom right */
 .canvas-hint {
   position: absolute;
-  bottom: 8px;
-  left: 12px;
+  bottom: 14px;
+  right: 14px;
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 500;
   color: var(--mute-dark);
   pointer-events: none;
@@ -538,22 +546,46 @@ body {
 }
 
 .tile.tile-carrying {
-  border-color: rgba(255, 119, 0, 0.45);
-  background-color: rgba(255, 119, 0, 0.06);
-  color: rgba(255, 255, 255, 0.55);
+  border-color: rgba(255, 119, 0, 0.55);
+  background-color: rgba(255, 119, 0, 0.08);
+  color: rgba(255, 255, 255, 0.65);
   border-style: dashed;
-  animation: tileCarryingPulse 0.7s ease-in-out infinite alternate;
+  animation: tileCarryingPulse 0.6s ease-in-out infinite alternate;
 }
 
 @keyframes tileCarryingPulse {
-  0% { transform: scale(0.96); opacity: 0.45; }
-  100% { transform: scale(1.02); opacity: 0.85; }
+  0% { transform: scale(0.95); opacity: 0.5; }
+  100% { transform: scale(1.03); opacity: 0.95; }
 }
 
 @keyframes tileFlyPop {
   0% { transform: scale(0.6); opacity: 0.3; }
   75% { transform: scale(1.12); }
   100% { transform: scale(1.03); opacity: 1; }
+}
+
+/* Staggered progressive letter-by-letter reveal flip */
+.tile.tile-flip {
+  animation: tileFlipAnim 0.38s ease-in-out forwards;
+}
+
+@keyframes tileFlipAnim {
+  0% {
+    transform: rotateX(0deg) scale(1.03);
+  }
+  45% {
+    transform: rotateX(90deg) scale(1.12);
+  }
+  55% {
+    transform: rotateX(90deg) scale(1.12);
+  }
+  100% {
+    transform: rotateX(0deg) scale(1.0);
+  }
+}
+
+.tile.tile-revealed {
+  transition: background-color 0.3s ease, border-color 0.3s ease, transform 0.2s ease;
 }
 
 .tile.tile-correct {

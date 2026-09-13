@@ -56,6 +56,7 @@ let brainScene, brainCamera, brainRenderer, brainControls;
 let flyGroup, flyWings = [], flyLegs = [], carriedTileMesh;
 let boardTiles3D = []; // 6 rows x 5 cols meshes
 let brainPointsGeometry, brainPointsMesh, brainColorsDefault, brainColorsCurrent, brainActivityHeat, brainColorsResting;
+let activeSpikesMesh, activeSpikesGeo, activeSpikesPositions, activeSpikesColors;
 let letterBoxMesh;
 
 function initThreeScenes() {
@@ -79,7 +80,7 @@ function initWorldScene() {
   worldScene.fog = new THREE.FogExp2(0x06090e, 0.08);
 
   worldCamera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100);
-  worldCamera.position.set(0, 3.8, 5.2);
+  worldCamera.position.set(0.2, 2.1, 5.4);
 
   worldRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
   worldRenderer.setSize(width, height);
@@ -94,7 +95,7 @@ function initWorldScene() {
   worldControls.maxPolarAngle = Math.PI / 2 - 0.05;
   worldControls.minDistance = 2.0;
   worldControls.maxDistance = 10.0;
-  worldControls.target.set(0, 0.8, 0);
+  worldControls.target.set(0.2, 1.55, -0.8);
 
   // Lighting
   const ambientLight = new THREE.AmbientLight(0xdbeafe, 0.6);
@@ -149,36 +150,36 @@ function createGrassTerrain() {
 
 function create3DWordleBoard() {
   const boardGroup = new THREE.Group();
-  boardGroup.position.set(0, 0.1, -1.0);
+  boardGroup.position.set(0.2, 0.0, -0.8);
 
-  // Board frame / stand
-  const frameGeo = new THREE.BoxGeometry(4.2, 4.8, 0.2);
+  // Board frame / stand (centered at y = 1.55, height = 3.8)
+  const frameGeo = new THREE.BoxGeometry(3.6, 3.8, 0.16);
   const frameMat = new THREE.MeshStandardMaterial({
-    color: 0x111622,
-    roughness: 0.7,
+    color: 0x0f172a,
+    roughness: 0.6,
     metalness: 0.3
   });
   const frame = new THREE.Mesh(frameGeo, frameMat);
-  frame.position.set(0, 2.2, -0.1);
+  frame.position.set(0, 1.55, -0.1);
   frame.castShadow = true;
   frame.receiveShadow = true;
   boardGroup.add(frame);
 
   // Left & right stand legs
-  const legGeo = new THREE.CylinderGeometry(0.06, 0.06, 2.5);
-  const legMat = new THREE.MeshStandardMaterial({ color: 0x222938, metalness: 0.8 });
+  const legGeo = new THREE.CylinderGeometry(0.05, 0.05, 1.8);
+  const legMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.8 });
   const leftLeg = new THREE.Mesh(legGeo, legMat);
-  leftLeg.position.set(-1.8, 1.2, -0.15);
+  leftLeg.position.set(-1.6, 0.75, -0.15);
   boardGroup.add(leftLeg);
   const rightLeg = new THREE.Mesh(legGeo, legMat);
-  rightLeg.position.set(1.8, 1.2, -0.15);
+  rightLeg.position.set(1.6, 0.75, -0.15);
   boardGroup.add(rightLeg);
 
-  // 6 rows x 5 columns 3D Tiles
+  // 6 rows x 5 columns 3D Tiles (Rows 0 to 5 completely in camera frame)
   boardTiles3D = [];
-  const startY = 4.0;
-  const startX = -1.4;
-  const spacing = 0.7;
+  const startY = 3.0;
+  const startX = -1.16;
+  const spacing = 0.58;
 
   for (let r = 0; r < 6; r++) {
     boardTiles3D[r] = [];
@@ -186,29 +187,32 @@ function create3DWordleBoard() {
       const tileGroup = new THREE.Group();
       tileGroup.position.set(startX + c * spacing, startY - r * spacing, 0.05);
 
-      const tGeo = new THREE.BoxGeometry(0.58, 0.58, 0.08);
+      const tGeo = new THREE.BoxGeometry(0.50, 0.50, 0.07);
       const tMat = new THREE.MeshStandardMaterial({
-        color: 0x1e2738,
-        roughness: 0.5,
+        color: 0x141c2b,
+        roughness: 0.4,
         metalness: 0.2
       });
       const tMesh = new THREE.Mesh(tGeo, tMat);
       tMesh.castShadow = true;
       tileGroup.add(tMesh);
 
-      // Letter canvas texture on front face
+      // High-resolution 256x256 front face canvas
       const canvas = document.createElement('canvas');
-      canvas.width = 128;
-      canvas.height = 128;
+      canvas.width = 256;
+      canvas.height = 256;
       const ctx = canvas.getContext('2d');
-      ctx.fillStyle = '#1e2738';
-      ctx.fillRect(0, 0, 128, 128);
+      ctx.fillStyle = '#111827';
+      ctx.fillRect(0, 0, 256, 256);
+      ctx.strokeStyle = '#1e293b';
+      ctx.lineWidth = 8;
+      ctx.strokeRect(6, 6, 244, 244);
 
       const texture = new THREE.CanvasTexture(canvas);
-      const labelMat = new THREE.MeshBasicMaterial({ map: texture, transparent: true });
-      const labelGeo = new THREE.PlaneGeometry(0.54, 0.54);
+      const labelMat = new THREE.MeshBasicMaterial({ map: texture, transparent: false, side: THREE.DoubleSide });
+      const labelGeo = new THREE.PlaneGeometry(0.48, 0.48);
       const labelMesh = new THREE.Mesh(labelGeo, labelMat);
-      labelMesh.position.z = 0.045;
+      labelMesh.position.z = 0.048;
       tileGroup.add(labelMesh);
 
       boardGroup.add(tileGroup);
@@ -218,7 +222,10 @@ function create3DWordleBoard() {
         labelMesh: labelMesh,
         canvas: canvas,
         ctx: ctx,
-        texture: texture
+        texture: texture,
+        _lastLetter: '',
+        _lastColor: -1,
+        targetRotX: 0
       };
     }
   }
@@ -226,42 +233,65 @@ function create3DWordleBoard() {
   worldScene.add(boardGroup);
 }
 
-function update3DBoardTile(r, c, letter, colorCode) {
+function update3DBoardTile(r, c, letter, colorCode, isFlipping = false) {
   if (!boardTiles3D[r] || !boardTiles3D[r][c]) return;
   const tile = boardTiles3D[r][c];
+  letter = letter ? letter.toUpperCase() : '';
 
-  let bgHex = '#1e2738';
-  let boxColor = 0x1e2738;
+  if (isFlipping) {
+    tile.targetRotX = Math.PI * 2; // trigger full 3D flip animation
+  }
+
+  if (tile._lastLetter === letter && tile._lastColor === colorCode && !isFlipping) return;
+  tile._lastLetter = letter;
+  tile._lastColor = colorCode;
+
+  let bgHex = '#111827';
+  let boxColor = 0x111827;
+  let strokeHex = '#1e293b';
+  let textHex = '#ffffff';
+
   if (colorCode === 2) {
-    bgHex = '#22c55e'; // Green
-    boxColor = 0x22c55e;
+    bgHex = '#15803d'; // Green
+    boxColor = 0x15803d;
+    strokeHex = '#4ade80';
   } else if (colorCode === 1) {
-    bgHex = '#eab308'; // Yellow
-    boxColor = 0xeab308;
+    bgHex = '#b45309'; // Yellow / Gold
+    boxColor = 0xb45309;
+    strokeHex = '#fde047';
   } else if (colorCode === 0) {
     bgHex = '#334155'; // Gray
     boxColor = 0x334155;
+    strokeHex = '#64748b';
+  } else if (letter) {
+    bgHex = '#1e293b'; // Placed unrevealed tile
+    boxColor = 0x1e293b;
+    strokeHex = '#38bdf8'; // Electric Cyan border glow
   }
 
   tile.boxMesh.material.color.setHex(boxColor);
 
   const ctx = tile.ctx;
   ctx.fillStyle = bgHex;
-  ctx.fillRect(0, 0, 128, 128);
+  ctx.fillRect(0, 0, 256, 256);
+
+  ctx.strokeStyle = strokeHex;
+  ctx.lineWidth = letter ? 10 : 8;
+  ctx.strokeRect(6, 6, 244, 244);
 
   if (letter) {
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 84px Inter, sans-serif';
+    ctx.fillStyle = textHex;
+    ctx.font = 'bold 152px system-ui, -apple-system, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(letter.toUpperCase(), 64, 68);
+    ctx.fillText(letter, 128, 136);
   }
   tile.texture.needsUpdate = true;
 }
 
 function create3DLetterBox() {
   const boxGroup = new THREE.Group();
-  boxGroup.position.set(-2.8, 0.15, 1.2);
+  boxGroup.position.set(-2.4, 0.15, 1.0);
 
   // Wooden Crate
   const crateGeo = new THREE.BoxGeometry(1.2, 0.3, 1.0);
@@ -452,7 +482,24 @@ function animateWorld() {
 
     // Carried Letter Piece Visibility
     if (carriedTileMesh) {
-      carriedTileMesh.visible = !!STATE.fly.carriedLetter;
+      carriedTileMesh.visible = !!(STATE.fly.carried_letter || STATE.fly.carriedLetter);
+    }
+  }
+
+  // Smooth 3D Tile Flip Animation
+  if (boardTiles3D && boardTiles3D.length) {
+    for (let r = 0; r < 6; r++) {
+      if (!boardTiles3D[r]) continue;
+      for (let c = 0; c < 5; c++) {
+        const t = boardTiles3D[r][c];
+        if (t && t.group && t.targetRotX > 0) {
+          t.group.rotation.x += (t.targetRotX - t.group.rotation.x) * 0.16;
+          if (Math.abs(t.targetRotX - t.group.rotation.x) < 0.05) {
+            t.group.rotation.x = 0;
+            t.targetRotX = 0;
+          }
+        }
+      }
     }
   }
 
@@ -477,8 +524,8 @@ function initBrainScene() {
   brainScene = new THREE.Scene();
   brainScene.background = new THREE.Color(0x050608);
 
-  brainCamera = new THREE.PerspectiveCamera(40, width / height, 0.1, 100);
-  brainCamera.position.set(0, 0, 2.2);
+  brainCamera = new THREE.PerspectiveCamera(38, width / height, 0.1, 100);
+  brainCamera.position.set(0, 0, 2.6);
 
   brainRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
   brainRenderer.setSize(width, height);
@@ -489,9 +536,10 @@ function initBrainScene() {
   brainControls.enableDamping = true;
   brainControls.dampingFactor = 0.05;
   brainControls.autoRotate = true;
-  brainControls.autoRotateSpeed = 0.8;
+  brainControls.autoRotateSpeed = 0.6;
   brainControls.minDistance = 1.0;
   brainControls.maxDistance = 5.0;
+  brainControls.target.set(0, 0, 0);
 
   animateBrain();
 }
@@ -500,38 +548,50 @@ function buildBrainPointCloud(data) {
   const coords = data.coords; // (n, 3) in [-0.5, 0.5]
   const n = coords.length;
 
+  // Compute exact center of mass to center the brain at (0, 0, 0)
+  let cx = 0, cy = 0, cz = 0;
+  for (let i = 0; i < n; i++) {
+    cx += coords[i][0];
+    cy += coords[i][1];
+    cz += coords[i][2];
+  }
+  cx /= n; cy /= n; cz /= n;
+  STATE.circuitCenterX = cx;
+  STATE.circuitCenterY = cy;
+  STATE.circuitCenterZ = cz;
+
   const positions = new Float32Array(n * 3);
   brainColorsDefault = new Float32Array(n * 3);
   brainColorsResting = new Float32Array(n * 3);
   brainColorsCurrent = new Float32Array(n * 3);
 
   for (let i = 0; i < n; i++) {
-    positions[i * 3]     = coords[i][0] * 1.5;
-    positions[i * 3 + 1] = coords[i][1] * 1.5;
-    positions[i * 3 + 2] = coords[i][2] * 1.5;
+    positions[i * 3]     = (coords[i][0] - cx) * 1.85;
+    positions[i * 3 + 1] = (coords[i][1] - cy) * 1.85;
+    positions[i * 3 + 2] = (coords[i][2] - cz) * 1.85;
 
-    // Assign color based on real biological population
-    let r = 1.0, g = 0.7, b = 0.0; // Central Brain Amber
+    // Assign biological population baseline colors
+    let r = 1.0, g = 0.72, b = 0.05; // Central Brain Amber
     if (data.is_dopamine[i]) {
       // Dopaminergic (PAM/PPL1 reward) -> Radiant Crimson Red
-      r = 1.0; g = 0.16; b = 0.33;
+      r = 1.0; g = 0.12; b = 0.35;
     } else if (data.is_descending[i]) {
       // Motor / Descending -> Vivid Violet
-      r = 0.85; g = 0.15; b = 1.0;
+      r = 0.85; g = 0.18; b = 1.0;
     } else if (data.is_orn_letter[i] >= 0) {
       // Sensory ORNs (Letters A-Z / Nose) -> Bright Emerald Green
-      r = 0.0; g = 1.0; b = 0.45;
+      r = 0.05; g = 1.0; b = 0.45;
     } else if (data.super_classes[i] === 'optic' || data.is_visual[i]) {
       // Optic Lobe (Eyes) -> Cyan Blue
-      r = 0.0; g = 0.85; b = 1.0;
+      r = 0.05; g = 0.85; b = 1.0;
     }
 
     brainColorsDefault[i * 3]     = r;
     brainColorsDefault[i * 3 + 1] = g;
     brainColorsDefault[i * 3 + 2] = b;
 
-    // Dim resting background color (22% brightness) for maximum spike contrast
-    const dim = 0.22;
+    // Resting baseline brightness (20% intensity)
+    const dim = 0.20;
     brainColorsResting[i * 3]     = r * dim;
     brainColorsResting[i * 3 + 1] = g * dim;
     brainColorsResting[i * 3 + 2] = b * dim;
@@ -559,7 +619,7 @@ function buildBrainPointCloud(data) {
   const particleTex = new THREE.CanvasTexture(particleCanvas);
 
   const mat = new THREE.PointsMaterial({
-    size: 0.052,
+    size: 0.058,
     vertexColors: true,
     map: particleTex,
     transparent: true,
@@ -570,6 +630,40 @@ function buildBrainPointCloud(data) {
   brainPointsMesh = new THREE.Points(brainPointsGeometry, mat);
   brainScene.add(brainPointsMesh);
   brainActivityHeat = new Float32Array(n);
+
+  // Dedicated Active Spikes Mesh: 4.5x larger radiant glowing starbursts!
+  const maxSpikes = 1200;
+  activeSpikesPositions = new Float32Array(maxSpikes * 3);
+  activeSpikesColors = new Float32Array(maxSpikes * 3);
+  activeSpikesGeo = new THREE.BufferGeometry();
+  activeSpikesGeo.setAttribute('position', new THREE.BufferAttribute(activeSpikesPositions, 3));
+  activeSpikesGeo.setAttribute('color', new THREE.BufferAttribute(activeSpikesColors, 3));
+  activeSpikesGeo.setDrawRange(0, 0);
+
+  const spikeCanvas = document.createElement('canvas');
+  spikeCanvas.width = 64;
+  spikeCanvas.height = 64;
+  const sCtx = spikeCanvas.getContext('2d');
+  const sGrad = sCtx.createRadialGradient(32, 32, 0, 32, 32, 32);
+  sGrad.addColorStop(0, 'rgba(255, 255, 255, 1.0)');
+  sGrad.addColorStop(0.22, 'rgba(255, 255, 255, 0.95)');
+  sGrad.addColorStop(0.55, 'rgba(120, 240, 255, 0.7)');
+  sGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  sCtx.fillStyle = sGrad;
+  sCtx.fillRect(0, 0, 64, 64);
+  const spikeTex = new THREE.CanvasTexture(spikeCanvas);
+
+  const spikeMat = new THREE.PointsMaterial({
+    size: 0.26,
+    vertexColors: true,
+    map: spikeTex,
+    transparent: true,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false
+  });
+
+  activeSpikesMesh = new THREE.Points(activeSpikesGeo, spikeMat);
+  brainScene.add(activeSpikesMesh);
 }
 
 function animateBrain() {
@@ -578,17 +672,17 @@ function animateBrain() {
   if (brainPointsGeometry && brainColorsCurrent && brainActivityHeat && brainColorsResting) {
     const colors = brainPointsGeometry.attributes.color.array;
     const n = colors.length / 3;
+    const spikeRGB = STATE.activeSpikeRGB || [0.10, 1.0, 0.45];
 
     for (let i = 0; i < n; i++) {
       const h = brainActivityHeat[i];
       if (h > 0.01) {
-        // High contrast active firing spike:
-        // Surge to neon white at peak, decaying through vibrant saturated population hue
-        const rPeak = brainColorsDefault[i * 3];
-        const gPeak = brainColorsDefault[i * 3 + 1];
-        const bPeak = brainColorsDefault[i * 3 + 2];
+        // High contrast active firing spike with action-specific modality color:
+        const rPeak = spikeRGB[0];
+        const gPeak = spikeRGB[1];
+        const bPeak = spikeRGB[2];
 
-        const whiteBoost = Math.max(0, (h - 0.3) / 0.7);
+        const whiteBoost = Math.max(0, (h - 0.25) / 0.75);
         const rVal = rPeak + (1.0 - rPeak) * whiteBoost;
         const gVal = gPeak + (1.0 - gPeak) * whiteBoost;
         const bVal = bPeak + (1.0 - bPeak) * whiteBoost;
@@ -597,7 +691,6 @@ function animateBrain() {
         colors[i * 3 + 1] = gVal * h + brainColorsResting[i * 3 + 1] * (1.0 - h);
         colors[i * 3 + 2] = bVal * h + brainColorsResting[i * 3 + 2] * (1.0 - h);
 
-        // Smooth exponential decay (~160ms tail)
         brainActivityHeat[i] *= 0.88;
       } else {
         brainActivityHeat[i] = 0;
@@ -607,6 +700,14 @@ function animateBrain() {
       }
     }
     brainPointsGeometry.attributes.color.needsUpdate = true;
+  }
+
+  // Smoothly decay active spike bursts
+  if (activeSpikesGeo && activeSpikesGeo.drawRange.count > 0) {
+    const cur = activeSpikesGeo.drawRange.count;
+    if (Math.random() < 0.15) {
+      activeSpikesGeo.setDrawRange(0, Math.max(0, cur - 10));
+    }
   }
 
   brainControls.update();
@@ -648,9 +749,16 @@ function renderFlyGrid() {
   const grid = document.getElementById('flyGrid');
   const guesses = STATE.fly.guesses || [];
   const feedbacks = STATE.fly.feedbacks || [];
-  const activeRowIdx = guesses.length;
+  const isRevealing = (STATE.fly.phase === 'REVEALING');
+  const revealingIdx = STATE.fly.revealing_letter_idx !== undefined ? STATE.fly.revealing_letter_idx : -1;
   const currentLetters = STATE.fly.current_guess_letters || [];
   const placedCount = STATE.fly.placed_letter_idx || 0;
+  const carried = STATE.fly.carried_letter || STATE.fly.carriedLetter;
+
+  // If in REVEALING, the active row being revealed is guesses.length - 1
+  // Otherwise, the active row being assembled is guesses.length
+  const assembleRowIdx = isRevealing ? -1 : guesses.length;
+  const revealRowIdx = isRevealing ? (guesses.length - 1) : -1;
 
   for (let r = 0; r < 6; r++) {
     const row = grid.children[r];
@@ -659,32 +767,60 @@ function renderFlyGrid() {
 
     for (let c = 0; c < 5; c++) {
       const tile = row.children[c];
-      if (r < activeRowIdx) {
-        // Committed past guesses with feedback colors
+
+      if (r === revealRowIdx && guess) {
+        // This row is currently undergoing progressive letter-by-letter reveal!
+        const letter = guess[c] || (currentLetters[c] || '');
+        tile.textContent = letter;
+
+        if (c < revealingIdx) {
+          // Already flipped and revealed
+          tile.className = 'tile tile-filled tile-revealed';
+          if (fb && fb[c] !== undefined) {
+            applyTileColor(tile, fb[c]);
+            update3DBoardTile(r, c, letter, fb[c], false);
+          }
+        } else if (c === revealingIdx) {
+          // Flipping right now!
+          tile.className = 'tile tile-filled tile-flip';
+          if (fb && fb[c] !== undefined) {
+            applyTileColor(tile, fb[c]);
+            update3DBoardTile(r, c, letter, fb[c], true);
+          }
+        } else {
+          // Placed, waiting for its turn to flip
+          tile.className = 'tile tile-filled tile-fly-placed';
+          update3DBoardTile(r, c, letter, -1, false);
+        }
+
+      } else if (r < guesses.length && (!isRevealing || r < revealRowIdx)) {
+        // Completed past guess
         if (guess && guess[c]) {
           tile.textContent = guess[c];
-          tile.className = 'tile tile-filled';
+          tile.className = 'tile tile-filled tile-revealed';
           if (fb && fb[c] !== undefined) {
             applyTileColor(tile, fb[c]);
             update3DBoardTile(r, c, guess[c], fb[c]);
           }
         }
-      } else if (r === activeRowIdx && STATE.gameActive && !STATE.fly.done) {
-        // Active row: show letters placed one by one as the fly delivers each tile
+
+      } else if (r === assembleRowIdx && STATE.gameActive && !STATE.fly.done) {
+        // Active row being assembled tile-by-tile
         if (c < placedCount && currentLetters[c]) {
           tile.textContent = currentLetters[c];
           tile.className = 'tile tile-filled tile-fly-placed';
           update3DBoardTile(r, c, currentLetters[c], -1);
-        } else if (c === placedCount && STATE.fly.carriedLetter) {
-          // Live preview of letter currently being fetched/carried by the fly!
-          tile.textContent = STATE.fly.carriedLetter;
+        } else if (c === placedCount && carried) {
+          // Live preview of carried letter piece
+          tile.textContent = carried;
           tile.className = 'tile tile-filled tile-carrying';
-          update3DBoardTile(r, c, STATE.fly.carriedLetter, -1);
+          update3DBoardTile(r, c, carried, -1);
         } else {
           tile.textContent = '';
           tile.className = 'tile';
           update3DBoardTile(r, c, '', -1);
         }
+
       } else {
         tile.textContent = '';
         tile.className = 'tile';
@@ -883,6 +1019,7 @@ function onServerTelemetry(data) {
 
   // Fly state update
   if (data.fly) {
+    data.fly.carriedLetter = data.fly.carried_letter || data.fly.carriedLetter;
     STATE.fly = data.fly;
     renderFlyGrid();
     updateFlyHUD();
@@ -907,11 +1044,59 @@ function onServerTelemetry(data) {
   if (data.brain) {
     const newlyActive = data.brain.active_neurons || [];
     STATE.activeNeurons = new Set(newlyActive);
+    const mode = data.brain.sensory_mode || '';
+    const detail = data.brain.sensory_detail || '';
+
+    // Modality-specific spike coloring
+    let sR = 0.08, sG = 1.0, sB = 0.40; // default Emerald Lime (Nose / Olfactory)
+    if (mode === 'MOTOR') {
+      sR = 0.82; sG = 0.20; sB = 1.0;  // Electric Violet
+    } else if (mode === 'PLACEMENT') {
+      sR = 0.08; sG = 0.88; sB = 1.0;  // Neon Cyan
+    } else if (mode === 'DOPAMINE') {
+      sR = 1.0; sG = 0.08; sB = 0.28;  // Radiant Crimson Fire
+    } else if (mode === 'EYES') {
+      if (detail.includes('GREEN') || detail.includes('🟩')) {
+        sR = 0.12; sG = 1.0; sB = 0.25; // Bright Electric Green Optic Lobe
+      } else if (detail.includes('YELLOW') || detail.includes('🟨')) {
+        sR = 1.0; sG = 0.82; sB = 0.02; // Vivid Solar Gold Optic Lobe
+      } else {
+        sR = 0.65; sG = 0.72; sB = 0.85; // Cool Slate/Silver Optic Lobe
+      }
+    }
+    STATE.activeSpikeRGB = [sR, sG, sB];
+
     if (brainActivityHeat && newlyActive.length > 0) {
       for (let i = 0; i < newlyActive.length; i++) {
         brainActivityHeat[newlyActive[i]] = 1.0;
       }
     }
+
+    // Update the Large Dedicated Active Spikes Mesh with centered coordinates
+    if (activeSpikesMesh && activeSpikesGeo && STATE.circuit && STATE.circuit.coords) {
+      const coords = STATE.circuit.coords;
+      const count = Math.min(newlyActive.length, 1200);
+      const cx = STATE.circuitCenterX || 0;
+      const cy = STATE.circuitCenterY || 0;
+      const cz = STATE.circuitCenterZ || 0;
+
+      for (let k = 0; k < count; k++) {
+        const nIdx = newlyActive[k];
+        if (coords[nIdx]) {
+          activeSpikesPositions[k * 3]     = (coords[nIdx][0] - cx) * 1.85;
+          activeSpikesPositions[k * 3 + 1] = (coords[nIdx][1] - cy) * 1.85;
+          activeSpikesPositions[k * 3 + 2] = (coords[nIdx][2] - cz) * 1.85;
+
+          activeSpikesColors[k * 3]     = sR;
+          activeSpikesColors[k * 3 + 1] = sG;
+          activeSpikesColors[k * 3 + 2] = sB;
+        }
+      }
+      activeSpikesGeo.setDrawRange(0, count);
+      activeSpikesGeo.attributes.position.needsUpdate = true;
+      activeSpikesGeo.attributes.color.needsUpdate = true;
+    }
+
     STATE.dopamineLevel = data.brain.dopamine_pulse || 0.0;
 
     // Update Sensory HUD card and dynamic glow
@@ -967,7 +1152,14 @@ function updateSensoryHUD(mode, detail) {
     if (vignette) vignette.classList.add('active-nose');
   } else if (mode === 'EYES') {
     dot.classList.add('eyes');
-    title.textContent = '👁 VISION · OPTIC LOBE (TILE COLOR FEEDBACK)';
+    const det = detail || '';
+    if (det.includes('GREEN') || det.includes('🟩')) {
+      title.textContent = '👁 OPTIC LOBE (EYES) · 🟩 CORRECT TILE BURST';
+    } else if (det.includes('YELLOW') || det.includes('🟨')) {
+      title.textContent = '👁 OPTIC LOBE (EYES) · 🟨 PRESENT TILE BURST';
+    } else {
+      title.textContent = '👁 OPTIC LOBE (EYES) · ⬜ ABSENT TILE FILTER';
+    }
     if (vignette) vignette.classList.add('active-eyes');
   } else if (mode === 'PLACEMENT') {
     dot.classList.add('placement');
@@ -979,7 +1171,7 @@ function updateSensoryHUD(mode, detail) {
     if (vignette) vignette.classList.add('active-dopamine');
   } else if (mode === 'MOTOR') {
     dot.classList.add('motor');
-    title.textContent = '⚡ MOTOR · DESCENDING LOCOMOTION';
+    title.textContent = '⚡ MOTOR · DESCENDING LOCOMOTION GAIT';
   } else if (mode === 'WORKING_MEMORY') {
     dot.classList.add('memory');
     title.textContent = '🧠 WORKING MEMORY · MUSHROOM BODY (KENYON CELLS)';
@@ -1004,17 +1196,23 @@ function updateFlyHUD() {
     bubbleText.textContent = `Walking to letter crate for letter #${nextNum}... Descending motor neurons firing!`;
     tileBadge.style.display = 'none';
   } else if (phase === 'PICKING_TILE' || phase === 'CARRYING_TILE' || phase === 'WALKING_TO_BOARD') {
-    const char = STATE.fly.carriedLetter || 'TILE';
+    const char = STATE.fly.carried_letter || STATE.fly.carriedLetter || 'TILE';
     bubbleText.textContent = `Carrying letter '${char}' — Olfactory ORN ('${char}' smell) firing in antennal lobe!`;
     tileBadge.style.display = 'inline-block';
     tileLetter.textContent = char;
   } else if (phase === 'PLACING_TILE') {
-    const char = STATE.fly.carriedLetter || (STATE.fly.current_guess_letters && STATE.fly.current_guess_letters[STATE.fly.current_letter_idx]) || '';
+    const char = STATE.fly.carried_letter || STATE.fly.carriedLetter || (STATE.fly.current_guess_letters && STATE.fly.current_guess_letters[STATE.fly.current_letter_idx]) || '';
     const slot = (STATE.fly.current_letter_idx || 0) + 1;
     bubbleText.textContent = `Placing '${char}' into slot #${slot}! Visual retinotopic + sensory confirmation pulse!`;
     tileBadge.style.display = 'none';
   } else if (phase === 'REVEALING') {
-    bubbleText.textContent = 'Word complete! Optic visual neurons processing tile colors (🟩/🟨/⬜)!';
+    const revIdx = STATE.fly.revealing_letter_idx !== undefined ? STATE.fly.revealing_letter_idx : -1;
+    const char = (STATE.fly.current_guess_letters && STATE.fly.current_guess_letters[revIdx]) || '';
+    if (revIdx >= 0 && revIdx < 5) {
+      bubbleText.textContent = `Scanning slot #${revIdx + 1} ('${char}') — Optic visual neurons firing in response to tile color feedback!`;
+    } else {
+      bubbleText.textContent = 'Word complete! Optic visual neurons processing tile colors (🟩/🟨/⬜)!';
+    }
     tileBadge.style.display = 'none';
   } else if (phase === 'DOPAMINE_PULSE') {
     bubbleText.textContent = 'GOAL STATE REACHED! Dopamine PAM/PPL1 firing massive reward surge!';
@@ -1092,6 +1290,16 @@ function setupDOMListeners() {
     renderFlyGrid();
     hideResultOverlay();
     hidePlayerAnswerReveal();       // clear answer banner on new game
+
+    // Clear 3D Board tiles & active spikes
+    for (let r = 0; r < 6; r++) {
+      for (let c = 0; c < 5; c++) {
+        update3DBoardTile(r, c, '', -1);
+      }
+    }
+    if (activeSpikesGeo) {
+      activeSpikesGeo.setDrawRange(0, 0);
+    }
   }
 
   document.getElementById('btnStartGame').addEventListener('click', async () => {
