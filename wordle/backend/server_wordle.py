@@ -196,7 +196,15 @@ def plan_fly_guess():
     with torch.no_grad():
         desc_rates = brain.get_descending_rates()
         probs, logits = readout.score_candidates(desc_rates, candidates)
-        best_idx = torch.argmax(probs).item()
+
+        if len(fly_env.guesses) == 0:
+            # Turn 1: sample from distribution so the fly varies its opener
+            dist = torch.distributions.Categorical(probs)
+            best_idx = dist.sample().item()
+        else:
+            # Turn 2+: greedy argmax for accuracy
+            best_idx = torch.argmax(probs).item()
+
         guess = candidates[best_idx]
 
     session.next_guess_word = guess

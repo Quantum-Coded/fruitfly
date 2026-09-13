@@ -11,6 +11,7 @@ Ranks consistent words by letter frequency / positional entropy and returns
 the top-K shortlist for brain evaluation.
 """
 
+import random
 from collections import Counter
 from typing import List, Set, Dict, Optional, Tuple
 
@@ -37,9 +38,14 @@ class CandidateFilter:
         ranked by letter frequency and diversity.
         """
         if not guesses:
-            # First turn: return top opening words
+            # First turn: return a varied shortlist of strong openers.
+            # Sort by heuristic, then shuffle the top-N so the fly doesn't
+            # always pick the single best opener (ARISE) every game.
             ranked = sorted(self.all_words, key=self._word_heuristic_score, reverse=True)
-            return ranked[:top_k]
+            top_openers = ranked[:20]          # grab best 20 high-entropy openers
+            random.shuffle(top_openers)        # shuffle so position[0] varies
+            rest = ranked[20:top_k]            # fill remainder in ranked order
+            return top_openers + rest
 
         # Build constraints from history
         # 1. exact_match[pos] = letter
