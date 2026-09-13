@@ -886,6 +886,41 @@ body {
 }
 
 /* ════════════════════════════════════════════════════════════
+   ANSWER REVEAL BANNER  (shown on loss / fly wins)
+════════════════════════════════════════════════════════════ */
+.answer-reveal {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-sm);
+  padding: var(--sp-sm) var(--sp-md);
+  margin: var(--sp-xs) 0;
+  background: linear-gradient(135deg, rgba(234,179,8,0.12), rgba(239,68,68,0.10));
+  border: 1px solid rgba(234,179,8,0.35);
+  border-radius: var(--r-sm);
+  animation: revealSlide 0.4s cubic-bezier(0.175,0.885,0.32,1.275) forwards;
+}
+@keyframes revealSlide {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.answer-reveal-label {
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  color: var(--body-dark);
+  text-transform: uppercase;
+}
+.answer-reveal-word {
+  font-family: var(--font-mono);
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  color: #eab308;
+  text-shadow: 0 0 12px rgba(234,179,8,0.5);
+}
+
+/* ════════════════════════════════════════════════════════════
    TOAST NOTIFICATIONS  (badge-info pill floating)
 ════════════════════════════════════════════════════════════ */
 #toast-container {

@@ -857,6 +857,12 @@ function onServerTelemetry(data) {
     renderPlayerGrid();
   }
 
+  // Reveal player's answer word when:
+  //   (a) fly won and game ended, or (b) player used all 6 guesses without winning
+  if (data.player && data.player.secret && !STATE.player.won) {
+    showPlayerAnswerReveal(data.player.secret);
+  }
+
   // Connectome brain spikes
   if (data.brain) {
     STATE.activeNeurons = new Set(data.brain.active_neurons || []);
@@ -993,6 +999,7 @@ function setupDOMListeners() {
     renderPlayerGrid();
     renderFlyGrid();
     hideResultOverlay();
+    hidePlayerAnswerReveal();       // clear answer banner on new game
   }
 
   document.getElementById('btnStartGame').addEventListener('click', async () => {
@@ -1094,4 +1101,23 @@ function hideResultOverlay(byUser = false) {
   const overlay = document.getElementById('result-overlay');
   if (overlay) overlay.classList.remove('visible');
   if (byUser) STATE.resultDismissed = true;
+}
+
+// ═══════════════════════════ ANSWER REVEAL ═══════════════════════════
+let _answerRevealed = false; // guard: only slide in once per game end
+
+function showPlayerAnswerReveal(secretWord) {
+  if (_answerRevealed) return;           // don't re-trigger every WS tick
+  _answerRevealed = true;
+  const banner = document.getElementById('playerAnswerReveal');
+  const wordEl = document.getElementById('playerAnswerWord');
+  if (!banner || !wordEl) return;
+  wordEl.textContent = secretWord.toUpperCase();
+  banner.style.display = 'flex';
+}
+
+function hidePlayerAnswerReveal() {
+  _answerRevealed = false;
+  const banner = document.getElementById('playerAnswerReveal');
+  if (banner) banner.style.display = 'none';
 }
