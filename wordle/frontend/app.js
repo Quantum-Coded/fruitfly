@@ -457,13 +457,16 @@ function animateWorld() {
   // Update Fly Position and Heading smoothly
   if (flyGroup && STATE.fly) {
     const targetPos = STATE.fly.pos;
-    flyGroup.position.x += (targetPos.x - flyGroup.position.x) * 0.2;
-    flyGroup.position.y += (targetPos.y + 0.25 - flyGroup.position.y) * 0.2;
-    flyGroup.position.z += (targetPos.z - flyGroup.position.z) * 0.2;
+    flyGroup.position.x += (targetPos.x - flyGroup.position.x) * 0.35;
+    flyGroup.position.y += (targetPos.y + 0.25 - flyGroup.position.y) * 0.35;
+    flyGroup.position.z += (targetPos.z - flyGroup.position.z) * 0.35;
 
-    // Smooth heading rotation
+    // Smooth shortest-arc heading rotation (prevents any spin-around loops)
     const targetRot = STATE.fly.heading;
-    flyGroup.rotation.y += (targetRot - flyGroup.rotation.y) * 0.2;
+    let diffRot = targetRot - flyGroup.rotation.y;
+    while (diffRot > Math.PI) diffRot -= Math.PI * 2;
+    while (diffRot < -Math.PI) diffRot += Math.PI * 2;
+    flyGroup.rotation.y += diffRot * 0.35;
 
     // Wing Flutter Animation
     if (flyWings.length === 2) {
@@ -810,11 +813,12 @@ function renderFlyGrid() {
           tile.textContent = currentLetters[c];
           tile.className = 'tile tile-filled tile-fly-placed';
           update3DBoardTile(r, c, currentLetters[c], -1);
-        } else if (c === placedCount && carried) {
-          // Live preview of carried letter piece
-          tile.textContent = carried;
-          tile.className = 'tile tile-filled tile-carrying';
-          update3DBoardTile(r, c, carried, -1);
+        } else if (c === placedCount && (carried || STATE.fly.phase === 'PLACING_TILE')) {
+          // Instant letter display the moment the fly touches the slot!
+          const letterToShow = currentLetters[c] || carried || '';
+          tile.textContent = letterToShow;
+          tile.className = 'tile tile-filled tile-fly-placed';
+          update3DBoardTile(r, c, letterToShow, -1);
         } else {
           tile.textContent = '';
           tile.className = 'tile';

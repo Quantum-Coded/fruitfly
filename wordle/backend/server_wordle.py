@@ -268,16 +268,20 @@ def tick_fly_state_machine(dt: float):
         dy = session.fly_target["y"] - session.fly_pos["y"]
         dz = session.fly_target["z"] - session.fly_pos["z"]
         dist = math.hypot(dx, dy, dz)
-        if dist > 0.12:
-            speed = 4.8
-            session.fly_heading = math.atan2(dx, dz)
-            session.fly_pos["x"] += (dx / dist) * speed * dt
-            session.fly_pos["y"] += (dy / dist) * speed * dt
-            session.fly_pos["z"] += (dz / dist) * speed * dt
-            session.leg_phase += dt * 10.0
-        else:
+        step = 5.2 * dt
+
+        if dist <= step or dist < 0.22:
+            session.fly_pos["x"] = session.fly_target["x"]
+            session.fly_pos["y"] = session.fly_target["y"]
+            session.fly_pos["z"] = session.fly_target["z"]
             session.fly_phase = "PICKING_TILE"
             session.phase_timer = 0.0
+        else:
+            session.fly_heading = math.atan2(dx, dz)
+            session.fly_pos["x"] += (dx / dist) * step
+            session.fly_pos["y"] += (dy / dist) * step
+            session.fly_pos["z"] += (dz / dist) * step
+            session.leg_phase += dt * 10.0
 
     elif session.fly_phase == "PICKING_TILE":
         # Fly grasps the letter piece: Olfactory Receptor Neurons (ORNs) for this letter fire!
@@ -288,7 +292,7 @@ def tick_fly_state_machine(dt: float):
         drive = encoder.encode_single_letter(session.carried_letter, session.current_letter_idx, is_carrying=False)
         session.active_neurons, session.telemetry = brain.step(drive, n_substeps=20)
 
-        if session.phase_timer > 0.25:
+        if session.phase_timer > 0.22:
             session.fly_phase = "WALKING_TO_BOARD"
             session.phase_timer = 0.0
             col = session.current_letter_idx
@@ -309,16 +313,22 @@ def tick_fly_state_machine(dt: float):
         dy = session.fly_target["y"] - session.fly_pos["y"]
         dz = session.fly_target["z"] - session.fly_pos["z"]
         dist = math.hypot(dx, dy, dz)
-        if dist > 0.12:
-            speed = 5.0
-            session.fly_heading = math.atan2(dx, dz)
-            session.fly_pos["x"] += (dx / dist) * speed * dt
-            session.fly_pos["y"] += (dy / dist) * speed * dt
-            session.fly_pos["z"] += (dz / dist) * speed * dt
-            session.leg_phase += dt * 10.0
-        else:
+        step = 5.4 * dt
+
+        if dist <= step or dist < 0.22:
+            session.fly_pos["x"] = session.fly_target["x"]
+            session.fly_pos["y"] = session.fly_target["y"]
+            session.fly_pos["z"] = session.fly_target["z"]
             session.fly_phase = "PLACING_TILE"
             session.phase_timer = 0.0
+            # Instantly display placed tile on contact!
+            session.placed_letter_idx = session.current_letter_idx + 1
+        else:
+            session.fly_heading = math.atan2(dx, dz)
+            session.fly_pos["x"] += (dx / dist) * step
+            session.fly_pos["y"] += (dy / dist) * step
+            session.fly_pos["z"] += (dz / dist) * step
+            session.leg_phase += dt * 10.0
 
     elif session.fly_phase == "PLACING_TILE":
         # Places tile into 3D grid slot: Retinotopic placement + confirmation pulse!
@@ -329,9 +339,7 @@ def tick_fly_state_machine(dt: float):
         drive = encoder.encode_tile_placement(letter, session.current_letter_idx)
         session.active_neurons, session.telemetry = brain.step(drive, n_substeps=24)
 
-        if session.phase_timer > 0.28:
-            # Letter placed! Increment placed count so it immediately renders on grid & 3D board
-            session.placed_letter_idx = session.current_letter_idx + 1
+        if session.phase_timer > 0.18:
             session.carried_letter = None
             session.current_letter_idx += 1
             if session.current_letter_idx < 5:
