@@ -531,14 +531,28 @@ body {
 }
 
 .tile.tile-fly-placed {
-  border-color: rgba(255, 119, 0, 0.75);
-  background-color: rgba(255, 119, 0, 0.12);
+  border-color: rgba(255, 119, 0, 0.85);
+  background-color: rgba(255, 119, 0, 0.16);
   color: #fff;
-  animation: tileFlyPop 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  animation: tileFlyPop 0.22s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.tile.tile-carrying {
+  border-color: rgba(255, 119, 0, 0.45);
+  background-color: rgba(255, 119, 0, 0.06);
+  color: rgba(255, 255, 255, 0.55);
+  border-style: dashed;
+  animation: tileCarryingPulse 0.7s ease-in-out infinite alternate;
+}
+
+@keyframes tileCarryingPulse {
+  0% { transform: scale(0.96); opacity: 0.45; }
+  100% { transform: scale(1.02); opacity: 0.85; }
 }
 
 @keyframes tileFlyPop {
-  0% { transform: scale(0.65); opacity: 0.5; }
+  0% { transform: scale(0.6); opacity: 0.3; }
+  75% { transform: scale(1.12); }
   100% { transform: scale(1.03); opacity: 1; }
 }
 
@@ -651,12 +665,126 @@ body {
   pointer-events: none;
   opacity: 0;
   background: radial-gradient(circle at 50% 50%,
-    rgba(255,42,95,0.38) 0%,
-    rgba(255,42,95,0.08) 45%,
+    rgba(255,42,95,0.45) 0%,
+    rgba(255,42,95,0.12) 45%,
     transparent 70%);
   transition: opacity 0.25s ease;
+  z-index: 3;
 }
 .dopamine-flare.active { opacity: 1; }
+
+/* ── Sensory Modality HUD Pill ── */
+.sensory-hud-card {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  z-index: 10;
+  background: rgba(11, 16, 28, 0.88);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--r-md);
+  padding: 8px 14px;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  max-width: 85%;
+}
+
+.sensory-hud-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sensory-hud-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--mute-dark);
+  transition: background 0.3s ease, box-shadow 0.3s ease;
+}
+
+.sensory-hud-dot.nose {
+  background: #10b981;
+  box-shadow: 0 0 12px #10b981;
+}
+
+.sensory-hud-dot.eyes {
+  background: #00d4ff;
+  box-shadow: 0 0 14px #00d4ff;
+}
+
+.sensory-hud-dot.dopamine {
+  background: #ff2a55;
+  box-shadow: 0 0 16px #ff2a55;
+}
+
+.sensory-hud-dot.motor {
+  background: #c084fc;
+  box-shadow: 0 0 12px #c084fc;
+}
+
+.sensory-hud-dot.placement {
+  background: #f59e0b;
+  box-shadow: 0 0 12px #f59e0b;
+}
+
+.sensory-hud-dot.memory {
+  background: #fbbf24;
+  box-shadow: 0 0 10px #fbbf24;
+}
+
+.sensory-hud-title {
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--on-dark);
+}
+
+.sensory-hud-detail {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--on-dark-mute);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Sensory Vignette Ambient Glow Layer */
+.sensory-vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.35s ease, background 0.4s ease;
+  z-index: 2;
+}
+
+.sensory-vignette.active-nose {
+  opacity: 1;
+  background: radial-gradient(circle at 75% 35%, rgba(16, 185, 129, 0.2) 0%, transparent 65%);
+}
+
+.sensory-vignette.active-eyes {
+  opacity: 1;
+  background: radial-gradient(circle at 50% 50%, rgba(0, 212, 255, 0.22) 0%, transparent 70%);
+}
+
+.sensory-vignette.active-dopamine {
+  opacity: 1;
+  background: radial-gradient(circle at 50% 50%, rgba(255, 42, 85, 0.32) 0%, transparent 75%);
+}
+
+.sensory-vignette.active-placement {
+  opacity: 1;
+  background: radial-gradient(circle at 50% 60%, rgba(245, 158, 11, 0.2) 0%, transparent 65%);
+}
 
 /* ─── Brain legend (hairline-dark band, caption-sm) ─── */
 .brain-legend {

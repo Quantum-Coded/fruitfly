@@ -55,7 +55,7 @@ let worldScene, worldCamera, worldRenderer, worldControls;
 let brainScene, brainCamera, brainRenderer, brainControls;
 let flyGroup, flyWings = [], flyLegs = [], carriedTileMesh;
 let boardTiles3D = []; // 6 rows x 5 cols meshes
-let brainPointsGeometry, brainPointsMesh, brainColorsDefault, brainColorsCurrent, brainActivityHeat;
+let brainPointsGeometry, brainPointsMesh, brainColorsDefault, brainColorsCurrent, brainActivityHeat, brainColorsResting;
 let letterBoxMesh;
 
 function initThreeScenes() {
@@ -502,6 +502,7 @@ function buildBrainPointCloud(data) {
 
   const positions = new Float32Array(n * 3);
   brainColorsDefault = new Float32Array(n * 3);
+  brainColorsResting = new Float32Array(n * 3);
   brainColorsCurrent = new Float32Array(n * 3);
 
   for (let i = 0; i < n; i++) {
@@ -510,31 +511,34 @@ function buildBrainPointCloud(data) {
     positions[i * 3 + 2] = coords[i][2] * 1.5;
 
     // Assign color based on real biological population
-    let r = 0.6, g = 0.6, b = 0.8; // default
+    let r = 1.0, g = 0.7, b = 0.0; // Central Brain Amber
     if (data.is_dopamine[i]) {
       // Dopaminergic (PAM/PPL1 reward) -> Radiant Crimson Red
       r = 1.0; g = 0.16; b = 0.33;
     } else if (data.is_descending[i]) {
       // Motor / Descending -> Vivid Violet
-      r = 0.83; g = 0.0; b = 1.0;
+      r = 0.85; g = 0.15; b = 1.0;
     } else if (data.is_orn_letter[i] >= 0) {
-      // Sensory ORNs (Letters A-Z) -> Bright Emerald Green
-      r = 0.0; g = 1.0; b = 0.53;
+      // Sensory ORNs (Letters A-Z / Nose) -> Bright Emerald Green
+      r = 0.0; g = 1.0; b = 0.45;
     } else if (data.super_classes[i] === 'optic' || data.is_visual[i]) {
       // Optic Lobe (Eyes) -> Cyan Blue
-      r = 0.0; g = 0.83; b = 1.0;
-    } else {
-      // Central Brain -> Amber Orange
-      r = 1.0; g = 0.67; b = 0.0;
+      r = 0.0; g = 0.85; b = 1.0;
     }
 
     brainColorsDefault[i * 3]     = r;
     brainColorsDefault[i * 3 + 1] = g;
     brainColorsDefault[i * 3 + 2] = b;
 
-    brainColorsCurrent[i * 3]     = r;
-    brainColorsCurrent[i * 3 + 1] = g;
-    brainColorsCurrent[i * 3 + 2] = b;
+    // Dim resting background color (22% brightness) for maximum spike contrast
+    const dim = 0.22;
+    brainColorsResting[i * 3]     = r * dim;
+    brainColorsResting[i * 3 + 1] = g * dim;
+    brainColorsResting[i * 3 + 2] = b * dim;
+
+    brainColorsCurrent[i * 3]     = r * dim;
+    brainColorsCurrent[i * 3 + 1] = g * dim;
+    brainColorsCurrent[i * 3 + 2] = b * dim;
   }
 
   brainPointsGeometry = new THREE.BufferGeometry();
@@ -548,14 +552,14 @@ function buildBrainPointCloud(data) {
   const pCtx = particleCanvas.getContext('2d');
   const gradient = pCtx.createRadialGradient(16, 16, 0, 16, 16, 16);
   gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
-  gradient.addColorStop(0.3, 'rgba(255, 255, 255, 0.8)');
+  gradient.addColorStop(0.35, 'rgba(255, 255, 255, 0.85)');
   gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
   pCtx.fillStyle = gradient;
   pCtx.fillRect(0, 0, 32, 32);
   const particleTex = new THREE.CanvasTexture(particleCanvas);
 
   const mat = new THREE.PointsMaterial({
-    size: 0.045,
+    size: 0.052,
     vertexColors: true,
     map: particleTex,
     transparent: true,
@@ -571,29 +575,35 @@ function buildBrainPointCloud(data) {
 function animateBrain() {
   requestAnimationFrame(animateBrain);
 
-  if (brainPointsGeometry && brainColorsCurrent && brainActivityHeat) {
+  if (brainPointsGeometry && brainColorsCurrent && brainActivityHeat && brainColorsResting) {
     const colors = brainPointsGeometry.attributes.color.array;
     const n = colors.length / 3;
 
     for (let i = 0; i < n; i++) {
       const h = brainActivityHeat[i];
       if (h > 0.01) {
-        // Flash bright white glow, decaying back to biological population color
-        const rDef = brainColorsDefault[i * 3];
-        const gDef = brainColorsDefault[i * 3 + 1];
-        const bDef = brainColorsDefault[i * 3 + 2];
+        // High contrast active firing spike:
+        // Surge to neon white at peak, decaying through vibrant saturated population hue
+        const rPeak = brainColorsDefault[i * 3];
+        const gPeak = brainColorsDefault[i * 3 + 1];
+        const bPeak = brainColorsDefault[i * 3 + 2];
 
-        colors[i * 3]     = rDef + (1.0 - rDef) * h;
-        colors[i * 3 + 1] = gDef + (1.0 - gDef) * h;
-        colors[i * 3 + 2] = bDef + (1.0 - bDef) * h;
+        const whiteBoost = Math.max(0, (h - 0.3) / 0.7);
+        const rVal = rPeak + (1.0 - rPeak) * whiteBoost;
+        const gVal = gPeak + (1.0 - gPeak) * whiteBoost;
+        const bVal = bPeak + (1.0 - bPeak) * whiteBoost;
 
-        // Smooth exponential decay (~150ms tail)
+        colors[i * 3]     = rVal * h + brainColorsResting[i * 3] * (1.0 - h);
+        colors[i * 3 + 1] = gVal * h + brainColorsResting[i * 3 + 1] * (1.0 - h);
+        colors[i * 3 + 2] = bVal * h + brainColorsResting[i * 3 + 2] * (1.0 - h);
+
+        // Smooth exponential decay (~160ms tail)
         brainActivityHeat[i] *= 0.88;
-      } else if (h > 0) {
+      } else {
         brainActivityHeat[i] = 0;
-        colors[i * 3]     = brainColorsDefault[i * 3];
-        colors[i * 3 + 1] = brainColorsDefault[i * 3 + 1];
-        colors[i * 3 + 2] = brainColorsDefault[i * 3 + 2];
+        colors[i * 3]     = brainColorsResting[i * 3];
+        colors[i * 3 + 1] = brainColorsResting[i * 3 + 1];
+        colors[i * 3 + 2] = brainColorsResting[i * 3 + 2];
       }
     }
     brainPointsGeometry.attributes.color.needsUpdate = true;
@@ -665,6 +675,11 @@ function renderFlyGrid() {
           tile.textContent = currentLetters[c];
           tile.className = 'tile tile-filled tile-fly-placed';
           update3DBoardTile(r, c, currentLetters[c], -1);
+        } else if (c === placedCount && STATE.fly.carriedLetter) {
+          // Live preview of letter currently being fetched/carried by the fly!
+          tile.textContent = STATE.fly.carriedLetter;
+          tile.className = 'tile tile-filled tile-carrying';
+          update3DBoardTile(r, c, STATE.fly.carriedLetter, -1);
         } else {
           tile.textContent = '';
           tile.className = 'tile';
@@ -899,6 +914,9 @@ function onServerTelemetry(data) {
     }
     STATE.dopamineLevel = data.brain.dopamine_pulse || 0.0;
 
+    // Update Sensory HUD card and dynamic glow
+    updateSensoryHUD(data.brain.sensory_mode, data.brain.sensory_detail);
+
     // Update telemetry bar
     const tel = data.brain.telemetry || {};
     document.getElementById('metricNeuronsFired').textContent = (tel.active_count || 0).toLocaleString();
@@ -930,6 +948,46 @@ function onServerTelemetry(data) {
   }
 
   checkGameRace();
+}
+
+function updateSensoryHUD(mode, detail) {
+  const dot = document.getElementById('sensoryHudDot');
+  const title = document.getElementById('sensoryHudTitle');
+  const detailEl = document.getElementById('sensoryHudDetail');
+  const vignette = document.getElementById('sensoryVignette');
+
+  if (!dot || !title || !detailEl) return;
+
+  dot.className = 'sensory-hud-dot';
+  if (vignette) vignette.className = 'sensory-vignette';
+
+  if (mode === 'NOSE') {
+    dot.classList.add('nose');
+    title.textContent = '👃 OLFACTORY NOSE · SMELLING LETTER (26 ORN CHANNELS)';
+    if (vignette) vignette.classList.add('active-nose');
+  } else if (mode === 'EYES') {
+    dot.classList.add('eyes');
+    title.textContent = '👁 VISION · OPTIC LOBE (TILE COLOR FEEDBACK)';
+    if (vignette) vignette.classList.add('active-eyes');
+  } else if (mode === 'PLACEMENT') {
+    dot.classList.add('placement');
+    title.textContent = '📍 CONFIRMATION · RETINOTOPIC SENSORY BURST';
+    if (vignette) vignette.classList.add('active-placement');
+  } else if (mode === 'DOPAMINE') {
+    dot.classList.add('dopamine');
+    title.textContent = '⚡ REWARD · PAM/PPL1 DOPAMINE BURST';
+    if (vignette) vignette.classList.add('active-dopamine');
+  } else if (mode === 'MOTOR') {
+    dot.classList.add('motor');
+    title.textContent = '⚡ MOTOR · DESCENDING LOCOMOTION';
+  } else if (mode === 'WORKING_MEMORY') {
+    dot.classList.add('memory');
+    title.textContent = '🧠 WORKING MEMORY · MUSHROOM BODY (KENYON CELLS)';
+  } else {
+    title.textContent = 'CONNECTOME RESTING';
+  }
+
+  detailEl.textContent = detail || 'Simulation running at 20 Hz';
 }
 
 function updateFlyHUD() {

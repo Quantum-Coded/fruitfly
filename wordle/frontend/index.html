@@ -16,7 +16,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 
   <!-- Styles -->
-  <link rel="stylesheet" href="/frontend/style.css">
+  <link rel="stylesheet" href="/frontend/style.css?v=3.5">
 
   <!-- Three.js r128 + OrbitControls -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -165,6 +165,18 @@
 
       <!-- 3D Connectome Point-Cloud Viewport -->
       <div id="connectome-container" aria-label="Interactive 3D brain point cloud">
+        <!-- Sensory Modality HUD Banner -->
+        <div class="sensory-hud-card" id="sensoryHudCard" aria-live="polite">
+          <div class="sensory-hud-header">
+            <span class="sensory-hud-dot" id="sensoryHudDot"></span>
+            <span class="sensory-hud-title" id="sensoryHudTitle">CONNECTOME RESTING</span>
+          </div>
+          <div class="sensory-hud-detail" id="sensoryHudDetail">Spiking simulation active at 20 Hz</div>
+        </div>
+
+        <!-- Sensory glow vignette overlay -->
+        <div class="sensory-vignette" id="sensoryVignette" aria-hidden="true"></div>
+
         <!-- Dopamine burst overlay -->
         <div class="dopamine-flare" id="dopamineFlare" aria-hidden="true"></div>
       </div>
@@ -253,6 +265,6 @@
   <!-- ══════════════════════════════════════════════════════
        APP SCRIPT
   ══════════════════════════════════════════════════════ -->
-  <script src="/frontend/app.js"></script>
+  <script src="/frontend/app.js?v=3.5"></script>
 </body>
 </html>
