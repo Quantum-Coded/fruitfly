@@ -55,7 +55,7 @@ let worldScene, worldCamera, worldRenderer, worldControls;
 let brainScene, brainCamera, brainRenderer, brainControls;
 let flyGroup, flyWings = [], flyLegs = [], carriedTileMesh;
 let boardTiles3D = []; // 6 rows x 5 cols meshes
-let brainPointsGeometry, brainPointsMesh, brainColorsDefault, brainColorsCurrent;
+let brainPointsGeometry, brainPointsMesh, brainColorsDefault, brainColorsCurrent, brainActivityHeat;
 let letterBoxMesh;
 
 function initThreeScenes() {
@@ -565,27 +565,35 @@ function buildBrainPointCloud(data) {
 
   brainPointsMesh = new THREE.Points(brainPointsGeometry, mat);
   brainScene.add(brainPointsMesh);
+  brainActivityHeat = new Float32Array(n);
 }
 
 function animateBrain() {
   requestAnimationFrame(animateBrain);
 
-  if (brainPointsGeometry && brainColorsCurrent) {
+  if (brainPointsGeometry && brainColorsCurrent && brainActivityHeat) {
     const colors = brainPointsGeometry.attributes.color.array;
     const n = colors.length / 3;
 
-    // Decay active firing spikes back to default colors
     for (let i = 0; i < n; i++) {
-      if (STATE.activeNeurons.has(i)) {
-        // Flash bright neon white
-        colors[i * 3]     = 1.0;
-        colors[i * 3 + 1] = 1.0;
-        colors[i * 3 + 2] = 1.0;
-      } else {
-        // Lerp back to base population color
-        colors[i * 3]     += (brainColorsDefault[i * 3] - colors[i * 3]) * 0.15;
-        colors[i * 3 + 1] += (brainColorsDefault[i * 3 + 1] - colors[i * 3 + 1]) * 0.15;
-        colors[i * 3 + 2] += (brainColorsDefault[i * 3 + 2] - colors[i * 3 + 2]) * 0.15;
+      const h = brainActivityHeat[i];
+      if (h > 0.01) {
+        // Flash bright white glow, decaying back to biological population color
+        const rDef = brainColorsDefault[i * 3];
+        const gDef = brainColorsDefault[i * 3 + 1];
+        const bDef = brainColorsDefault[i * 3 + 2];
+
+        colors[i * 3]     = rDef + (1.0 - rDef) * h;
+        colors[i * 3 + 1] = gDef + (1.0 - gDef) * h;
+        colors[i * 3 + 2] = bDef + (1.0 - bDef) * h;
+
+        // Smooth exponential decay (~150ms tail)
+        brainActivityHeat[i] *= 0.88;
+      } else if (h > 0) {
+        brainActivityHeat[i] = 0;
+        colors[i * 3]     = brainColorsDefault[i * 3];
+        colors[i * 3 + 1] = brainColorsDefault[i * 3 + 1];
+        colors[i * 3 + 2] = brainColorsDefault[i * 3 + 2];
       }
     }
     brainPointsGeometry.attributes.color.needsUpdate = true;
@@ -630,6 +638,9 @@ function renderFlyGrid() {
   const grid = document.getElementById('flyGrid');
   const guesses = STATE.fly.guesses || [];
   const feedbacks = STATE.fly.feedbacks || [];
+  const activeRowIdx = guesses.length;
+  const currentLetters = STATE.fly.current_guess_letters || [];
+  const placedCount = STATE.fly.placed_letter_idx || 0;
 
   for (let r = 0; r < 6; r++) {
     const row = grid.children[r];
@@ -638,12 +649,26 @@ function renderFlyGrid() {
 
     for (let c = 0; c < 5; c++) {
       const tile = row.children[c];
-      if (guess && guess[c]) {
-        tile.textContent = guess[c];
-        tile.classList.add('tile-filled');
-        if (fb && fb[c] !== undefined) {
-          applyTileColor(tile, fb[c]);
-          update3DBoardTile(r, c, guess[c], fb[c]);
+      if (r < activeRowIdx) {
+        // Committed past guesses with feedback colors
+        if (guess && guess[c]) {
+          tile.textContent = guess[c];
+          tile.className = 'tile tile-filled';
+          if (fb && fb[c] !== undefined) {
+            applyTileColor(tile, fb[c]);
+            update3DBoardTile(r, c, guess[c], fb[c]);
+          }
+        }
+      } else if (r === activeRowIdx && STATE.gameActive && !STATE.fly.done) {
+        // Active row: show letters placed one by one as the fly delivers each tile
+        if (c < placedCount && currentLetters[c]) {
+          tile.textContent = currentLetters[c];
+          tile.className = 'tile tile-filled tile-fly-placed';
+          update3DBoardTile(r, c, currentLetters[c], -1);
+        } else {
+          tile.textContent = '';
+          tile.className = 'tile';
+          update3DBoardTile(r, c, '', -1);
         }
       } else {
         tile.textContent = '';
@@ -865,7 +890,13 @@ function onServerTelemetry(data) {
 
   // Connectome brain spikes
   if (data.brain) {
-    STATE.activeNeurons = new Set(data.brain.active_neurons || []);
+    const newlyActive = data.brain.active_neurons || [];
+    STATE.activeNeurons = new Set(newlyActive);
+    if (brainActivityHeat && newlyActive.length > 0) {
+      for (let i = 0; i < newlyActive.length; i++) {
+        brainActivityHeat[newlyActive[i]] = 1.0;
+      }
+    }
     STATE.dopamineLevel = data.brain.dopamine_pulse || 0.0;
 
     // Update telemetry bar
@@ -908,24 +939,27 @@ function updateFlyHUD() {
   const phase = STATE.fly.phase;
 
   if (phase === 'THINKING') {
-    bubbleText.textContent = 'Scanning connectome... evaluating word candidates!';
+    bubbleText.textContent = 'Scanning connectome... Mushroom body associative memory evaluating words!';
     tileBadge.style.display = 'none';
   } else if (phase === 'WALKING_TO_BOX') {
-    bubbleText.textContent = 'Walking to the letter box to fetch a piece...';
+    const nextNum = (STATE.fly.placed_letter_idx || 0) + 1;
+    bubbleText.textContent = `Walking to letter crate for letter #${nextNum}... Descending motor neurons firing!`;
     tileBadge.style.display = 'none';
   } else if (phase === 'PICKING_TILE' || phase === 'CARRYING_TILE' || phase === 'WALKING_TO_BOARD') {
     const char = STATE.fly.carriedLetter || 'TILE';
-    bubbleText.textContent = `Carrying letter '${char}' to the Wordle board!`;
+    bubbleText.textContent = `Carrying letter '${char}' — Olfactory ORN ('${char}' smell) firing in antennal lobe!`;
     tileBadge.style.display = 'inline-block';
     tileLetter.textContent = char;
   } else if (phase === 'PLACING_TILE') {
-    bubbleText.textContent = 'Placing tile into grid slot!';
+    const char = STATE.fly.carriedLetter || (STATE.fly.current_guess_letters && STATE.fly.current_guess_letters[STATE.fly.current_letter_idx]) || '';
+    const slot = (STATE.fly.current_letter_idx || 0) + 1;
+    bubbleText.textContent = `Placing '${char}' into slot #${slot}! Visual retinotopic + sensory confirmation pulse!`;
     tileBadge.style.display = 'none';
   } else if (phase === 'REVEALING') {
-    bubbleText.textContent = 'Revealing tile feedback (green/yellow/gray)!';
+    bubbleText.textContent = 'Word complete! Optic visual neurons processing tile colors (🟩/🟨/⬜)!';
     tileBadge.style.display = 'none';
   } else if (phase === 'DOPAMINE_PULSE') {
-    bubbleText.textContent = 'GOAL STATE REACHED! Dopamine PAM/PPL1 firing!';
+    bubbleText.textContent = 'GOAL STATE REACHED! Dopamine PAM/PPL1 firing massive reward surge!';
     tileBadge.style.display = 'none';
   } else if (phase === 'GAME_OVER') {
     if (STATE.fly.won) {

@@ -90,9 +90,104 @@ class WordleSensoryEncoder:
         # Convert Hz to mV input drive
         return rates * EXT_DRIVE_SCALE
 
+    def encode_single_letter(
+        self,
+        letter: Optional[str],
+        position: int = 0,
+        is_carrying: bool = False
+    ) -> torch.Tensor:
+        """
+        Sensory drive when fly grasps or carries a specific letter.
+        Injected into the specific ORN class (smell) for that letter + mushroom body memory.
+        """
+        rates = torch.zeros(self.n, dtype=torch.float32, device=self.device)
+        if letter:
+            c_idx = ord(letter.upper()) - ord('A')
+            if 0 <= c_idx < 26:
+                drive_hz = 180.0 if not is_carrying else 145.0
+                rates += self.letter_masks[c_idx].float() * drive_hz
+
+        # Associative memory in Mushroom Body Kenyon Cells
+        mb_sparse = (torch.rand(self.n, device=self.device) < 0.06) & self.is_mb
+        rates += mb_sparse.float() * 65.0
+
+        # If carrying while moving, descending motor neurons fire
+        if is_carrying and self.is_descending is not None:
+            rates += self.is_descending.float() * 80.0
+
+        # Spontaneous biological baseline noise (~5 Hz)
+        noise = torch.rand(self.n, device=self.device) < 0.03
+        rates += noise.float() * 20.0
+
+        return rates * EXT_DRIVE_SCALE
+
+    def encode_tile_placement(
+        self,
+        letter: Optional[str],
+        position: int = 0
+    ) -> torch.Tensor:
+        """
+        Sensory confirmation burst when tile touches down on the board.
+        Simultaneous ORN letter smell + visual position retinotopic confirmation + motor burst.
+        """
+        rates = torch.zeros(self.n, dtype=torch.float32, device=self.device)
+        # Visual retinotopic sector confirmation
+        if 0 <= position < 5:
+            rates += self.visual_sector_masks[position].float() * 190.0
+
+        # Letter smell confirmation
+        if letter:
+            c_idx = ord(letter.upper()) - ord('A')
+            if 0 <= c_idx < 26:
+                rates += self.letter_masks[c_idx].float() * 170.0
+
+        # Descending motor termination burst
+        rates += self.is_descending.float() * 130.0
+
+        # Mushroom body activity
+        mb_sparse = (torch.rand(self.n, device=self.device) < 0.08) & self.is_mb
+        rates += mb_sparse.float() * 80.0
+
+        return rates * EXT_DRIVE_SCALE
+
+    def encode_motor_walk(self, leg_phase: float = 0.0) -> torch.Tensor:
+        """
+        Descending motor neuron drive coordinated with walking leg gait.
+        """
+        rates = torch.zeros(self.n, dtype=torch.float32, device=self.device)
+        gait_mod = 0.8 + 0.5 * abs(np.sin(leg_phase))
+        rates += self.is_descending.float() * (90.0 * gait_mod)
+
+        # Baseline central brain spontaneous activity
+        noise = torch.rand(self.n, device=self.device) < 0.035
+        rates += noise.float() * 22.0
+
+        return rates * EXT_DRIVE_SCALE
+
+    def encode_revealing_colors(self, feedback: Optional[List[int]]) -> torch.Tensor:
+        """
+        Optic lobe visual neuron activation across 5 positions according to tile colors.
+        """
+        rates = torch.zeros(self.n, dtype=torch.float32, device=self.device)
+        if feedback:
+            for pos, fb in enumerate(feedback[:5]):
+                sec_mask = self.visual_sector_masks[pos].float()
+                if fb == 2:    # Green (Correct)
+                    rates += sec_mask * 220.0
+                elif fb == 1:  # Yellow (Present)
+                    rates += sec_mask * 135.0
+                elif fb == 0:  # Gray (Absent)
+                    rates += sec_mask * 35.0
+
+        mb_sparse = (torch.rand(self.n, device=self.device) < 0.05) & self.is_mb
+        rates += mb_sparse.float() * 70.0
+
+        return rates * EXT_DRIVE_SCALE
+
     def encode_dopamine_reward(self, reward: float) -> torch.Tensor:
         """Dedicated dopamine pulse drive."""
         rates = torch.zeros(self.n, dtype=torch.float32, device=self.device)
         if reward > 0:
             rates += self.is_dopamine.float() * (reward * 300.0)
         return rates * EXT_DRIVE_SCALE
+
