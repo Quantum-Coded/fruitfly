@@ -1,0 +1,925 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   style.css — Wordle vs. a Fruit Fly (Real Connectome RL & 3D Embodiment)
+   Design System: PlayStation-inspired dark canvas / blue / white chapters
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+/* ─── Design Tokens ─── */
+:root {
+  /* Brand */
+  --ps-blue:          #0070d1;
+  --ps-blue-pressed:  #0064b7;
+  --ps-blue-active:   #004d8d;
+  --on-primary:       #ffffff;
+
+  /* Surfaces */
+  --canvas-dark:      #000000;
+  --surface-dark-elevated: #121314;
+  --surface-dark-card:     #181818;
+  --canvas-light:     #ffffff;
+  --surface-card:     #f5f7fa;
+  --surface-soft:     #f3f3f3;
+  --surface-filter:   rgba(245,247,250,0.3);
+
+  /* Text – dark canvas */
+  --on-dark:          #ffffff;
+  --body-dark:        rgba(255,255,255,0.7);
+  --mute-dark:        rgba(229,229,229,0.55);
+  --ash-dark:         rgba(229,229,229,0.2);
+  --on-dark-mute:     #cccccc;
+
+  /* Text – light canvas */
+  --ink:              #000000;
+  --ink-deep:         #121314;
+  --body-light:       rgba(0,0,0,0.6);
+  --mute-light:       #6b6b6b;
+  --ash-light:        #cccccc;
+  --link-dark:        #53b1ff;
+  --link-light:       #0064b7;
+
+  /* Dividers */
+  --hairline-dark:    rgba(229,229,229,0.2);
+  --hairline-light:   #f3f3f3;
+
+  /* Semantic */
+  --warning:          #c81b3a;
+
+  /* Game-specific accents (outside PS system — biological signal colours) */
+  --accent-green:     #22c55e;
+  --accent-yellow:    #eab308;
+  --accent-gray:      #334155;
+  --accent-dopamine:  #ff2a5f;
+  --accent-dopamine-glow: rgba(255,42,95,0.5);
+  --accent-cyan:      #00d4ff;
+  --accent-orange:    #ff7700;
+
+  /* Radius */
+  --r-none: 0px;
+  --r-sm:   4px;
+  --r-md:   8px;
+  --r-lg:   16px;
+  --r-full: 9999px;
+
+  /* Spacing */
+  --sp-xxs: 4px;
+  --sp-xs:  8px;
+  --sp-sm:  12px;
+  --sp-md:  16px;
+  --sp-lg:  24px;
+  --sp-xl:  32px;
+  --sp-xxl: 48px;
+  --sp-section: 96px;
+
+  /* Typography */
+  --font-display: 'Roboto', Arial, Helvetica, sans-serif;
+  --font-body:    'Inter', Arial, Helvetica, sans-serif;
+  --font-mono:    'JetBrains Mono', 'Courier New', monospace;
+}
+
+/* ─── Reset ─── */
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  background-color: var(--canvas-dark);
+  color: var(--on-dark);
+  font-family: var(--font-body);
+  font-size: 18px;
+  font-weight: 400;
+  line-height: 1.5;
+  letter-spacing: 0.1px;
+  overflow-x: hidden;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ════════════════════════════════════════════════════════════
+   PRIMARY NAV  (canvas-dark · height 56px)
+════════════════════════════════════════════════════════════ */
+#top-bar {
+  background-color: var(--canvas-dark);
+  border-bottom: 1px solid var(--hairline-dark);
+  padding: 0 var(--sp-xxl);
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  z-index: 200;
+  position: sticky;
+  top: 0;
+}
+
+/* Logo / brand left cluster */
+.header-left {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-md);
+}
+
+/* h1 — display headline at weight 300 (editorial PlayStation voice) */
+.logo-title {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 300;
+  letter-spacing: 0.1px;
+  line-height: 1.25;
+  color: var(--on-dark);
+  white-space: nowrap;
+}
+
+.accent-blue {
+  color: var(--ps-blue);
+}
+
+.accent-fly {
+  color: #53b1ff; /* link-dark for contrast on dark canvas */
+}
+
+.connectome-spec {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--mute-dark);
+  letter-spacing: 0;
+  line-height: 1.5;
+}
+
+/* Right cluster */
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-sm);
+}
+
+/* Live connection badge (pill) */
+.connection-badge {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-xs);
+  border: 1px solid var(--hairline-dark);
+  padding: 6px 14px;
+  border-radius: var(--r-full);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--on-dark-mute);
+  letter-spacing: 0;
+  background: rgba(255,255,255,0.04);
+}
+
+.pulse-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent-green);
+  box-shadow: 0 0 8px var(--accent-green);
+  flex-shrink: 0;
+  animation: pulseAnim 2s infinite ease-in-out;
+}
+.pulse-dot.offline { background: var(--mute-dark); box-shadow: none; animation: none; }
+
+@keyframes pulseAnim {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50%       { transform: scale(1.35); opacity: 0.45; }
+}
+
+/* ─── Buttons (PlayStation pill vocabulary) ─── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-xs);
+  height: 48px;
+  padding: 12px 28px;
+  border-radius: var(--r-full);
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.324px;
+  line-height: 1.25;
+  cursor: pointer;
+  border: none;
+  transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease;
+  white-space: nowrap;
+  text-transform: uppercase;
+}
+
+/* Primary — PS Blue */
+.btn-primary {
+  background: var(--ps-blue);
+  color: var(--on-primary);
+}
+.btn-primary:hover  { background: var(--ps-blue-pressed); }
+.btn-primary:active { background: var(--ps-blue-active); transform: scale(0.98); }
+
+/* Secondary dark canvas variant */
+.btn-secondary {
+  background: transparent;
+  color: var(--on-dark);
+  border: 1px solid var(--hairline-dark);
+}
+.btn-secondary:hover  { background: rgba(255,255,255,0.06); }
+.btn-secondary:active { transform: scale(0.98); }
+
+/* Disabled */
+.btn:disabled,
+.btn[disabled] {
+  background: rgba(255,255,255,0.08);
+  color: var(--ash-dark);
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ════════════════════════════════════════════════════════════
+   SUB-NAV STRIP  (canvas-dark · height 40px)
+════════════════════════════════════════════════════════════ */
+#sub-nav {
+  background-color: var(--canvas-dark);
+  border-bottom: 1px solid var(--hairline-dark);
+  height: 40px;
+  display: flex;
+  align-items: center;
+  padding: 0 var(--sp-xxl);
+  gap: var(--sp-xxl);
+}
+
+.sub-nav-link {
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--mute-dark);
+  text-decoration: none;
+  letter-spacing: 0;
+  line-height: 1.5;
+  transition: color 0.15s;
+  cursor: pointer;
+}
+.sub-nav-link:hover  { color: var(--on-dark); }
+.sub-nav-link.active { color: var(--on-dark); border-bottom: 2px solid var(--ps-blue); padding-bottom: 2px; }
+
+/* ════════════════════════════════════════════════════════════
+   MAIN APP CONTAINER  (flex, two panels)
+════════════════════════════════════════════════════════════ */
+#app-container {
+  display: flex;
+  flex: 1;
+  gap: var(--sp-md);
+  padding: var(--sp-md);
+  height: calc(100vh - 96px); /* nav 56 + subnav 40 */
+  overflow: hidden;
+}
+
+/* ─── Panel shells (dark-card) ─── */
+.panel {
+  background-color: var(--surface-dark-elevated);
+  border: 1px solid var(--hairline-dark);
+  border-radius: var(--r-md);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+}
+
+#left-panel  { flex: 0 0 58%; }
+#right-panel { flex: 1; }
+
+/* Panel header (dark-card variant) */
+.panel-header {
+  padding: var(--sp-sm) var(--sp-lg);
+  border-bottom: 1px solid var(--hairline-dark);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--surface-dark-card);
+  flex-shrink: 0;
+}
+
+/* Panel tag — monospace caption-sm */
+.panel-tag {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  color: var(--mute-dark);
+  text-transform: uppercase;
+}
+
+/* Status pills (badge-info variant) */
+.status-pill {
+  padding: 4px 10px;
+  border-radius: var(--r-full);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0;
+  background: rgba(0,112,209,0.18);
+  color: var(--link-dark);
+  border: 1px solid rgba(0,112,209,0.35);
+}
+
+.status-idle {
+  background: rgba(229,229,229,0.08);
+  color: var(--ash-dark);
+  border-color: var(--hairline-dark);
+}
+
+.status-spiking {
+  background: rgba(0,212,255,0.12);
+  color: var(--accent-cyan);
+  border-color: rgba(0,212,255,0.3);
+}
+
+.status-dopamine {
+  background: rgba(255,42,95,0.2);
+  color: var(--accent-dopamine);
+  border-color: rgba(255,42,95,0.45);
+  animation: pulseDopamine 0.5s infinite alternate;
+}
+
+@keyframes pulseDopamine {
+  from { box-shadow: 0 0 6px var(--accent-dopamine-glow); }
+  to   { box-shadow: 0 0 18px var(--accent-dopamine-glow); }
+}
+
+.status-won {
+  background: rgba(34,197,94,0.18);
+  color: var(--accent-green);
+  border-color: rgba(34,197,94,0.4);
+}
+
+.status-lost {
+  background: rgba(200,27,58,0.18);
+  color: var(--warning);
+  border-color: rgba(200,27,58,0.4);
+}
+
+/* ════════════════════════════════════════════════════════════
+   3D VIEWPORT — FLY WORLD (left panel top)
+════════════════════════════════════════════════════════════ */
+#three-container {
+  flex: 1;
+  position: relative;
+  min-height: 300px;
+  background: #06090e;
+  overflow: hidden;
+}
+
+/* HUD overlay */
+.hud-overlay {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  right: 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* Fly speech bubble — glassmorphism card */
+.fly-speech-bubble {
+  background: rgba(18,19,20,0.82);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--hairline-dark);
+  padding: var(--sp-xs) var(--sp-sm);
+  border-radius: var(--r-md);
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--body-dark);
+  display: flex;
+  align-items: center;
+  gap: var(--sp-xs);
+  max-width: 340px;
+}
+
+/* Tile carried badge — PS Blue pill */
+.fly-target-tile-badge {
+  background: var(--ps-blue);
+  padding: 6px 14px;
+  border-radius: var(--r-full);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.324px;
+  color: var(--on-primary);
+  box-shadow: 0 4px 12px rgba(0,112,209,0.4);
+}
+
+/* Canvas rotate hint */
+.canvas-hint {
+  position: absolute;
+  bottom: 8px;
+  left: 12px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--mute-dark);
+  pointer-events: none;
+  background: rgba(0,0,0,0.5);
+  padding: 3px 10px;
+  border-radius: var(--r-full);
+  backdrop-filter: blur(4px);
+}
+
+/* ════════════════════════════════════════════════════════════
+   WORDLE BOARDS SECTION (left panel bottom)
+════════════════════════════════════════════════════════════ */
+#boards-section {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--sp-sm);
+  padding: var(--sp-sm);
+  background: var(--surface-dark-card);
+  border-top: 1px solid var(--hairline-dark);
+  flex-shrink: 0;
+}
+
+/* Board card — product-card-dark variant */
+.board-card {
+  background: var(--surface-dark-elevated);
+  border: 1px solid var(--hairline-dark);
+  border-radius: var(--r-md);
+  padding: var(--sp-sm);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-xs);
+}
+
+.board-title {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 var(--sp-xxs);
+}
+
+/* badge-info (PS Blue pill, caption-sm) */
+.badge {
+  font-size: 12px;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: var(--r-full);
+  letter-spacing: 0;
+  line-height: 1.5;
+}
+
+.badge-fly {
+  background: rgba(255,119,0,0.15);
+  color: var(--accent-orange);
+  border: 1px solid rgba(255,119,0,0.3);
+}
+
+.badge-player {
+  background: rgba(83,177,255,0.15);
+  color: var(--link-dark);
+  border: 1px solid rgba(83,177,255,0.3);
+}
+
+.guess-counter {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--mute-dark);
+}
+
+/* ─── Wordle Grid ─── */
+.wordle-grid {
+  display: grid;
+  grid-template-rows: repeat(6, 1fr);
+  gap: 4px;
+}
+
+.grid-row {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 4px;
+}
+
+/* Tiles — game-tile spec: surface-dark-elevated, body-sm, r-md */
+.tile {
+  width: 38px;
+  height: 38px;
+  border: 2px solid var(--hairline-dark);
+  border-radius: var(--r-sm);           /* 4px — input-like precision */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 16px;
+  line-height: 1;
+  letter-spacing: 0;
+  color: var(--on-dark);
+  text-transform: uppercase;
+  background-color: var(--surface-dark-elevated);
+  transition: transform 0.15s ease, background-color 0.3s ease, border-color 0.3s ease;
+  user-select: none;
+}
+
+.tile.tile-filled {
+  border-color: rgba(229,229,229,0.4);
+  transform: scale(1.03);
+}
+
+.tile.tile-correct {
+  background-color: var(--accent-green);
+  border-color: var(--accent-green);
+  color: #fff;
+}
+
+.tile.tile-present {
+  background-color: var(--accent-yellow);
+  border-color: var(--accent-yellow);
+  color: #000;
+}
+
+.tile.tile-absent {
+  background-color: #273043;
+  border-color: #273043;
+  color: var(--on-dark-mute);
+}
+
+/* Tile reveal flip */
+.tile.reveal {
+  animation: tileFlip 0.45s ease forwards;
+}
+
+@keyframes tileFlip {
+  0%   { transform: rotateX(0deg); }
+  49%  { transform: rotateX(-90deg); }
+  50%  { transform: rotateX(-90deg); }
+  100% { transform: rotateX(0deg); }
+}
+
+/* ─── Virtual Keyboard ─── */
+#virtual-keyboard {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: var(--sp-xxs);
+}
+
+.kbd-row {
+  display: flex;
+  justify-content: center;
+  gap: 3px;
+}
+
+/* Keys — secondary dark button style, compact */
+.key {
+  height: 32px;
+  min-width: 26px;
+  padding: 0 6px;
+  border-radius: var(--r-sm);
+  background: rgba(255,255,255,0.07);
+  border: 1px solid var(--hairline-dark);
+  color: var(--on-dark);
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+.key:hover { background: rgba(255,255,255,0.14); }
+
+.key.key-wide {
+  min-width: 42px;
+  font-size: 11px;
+  letter-spacing: 0.2px;
+}
+
+.key.key-correct {
+  background: var(--accent-green);
+  border-color: var(--accent-green);
+  color: #fff;
+}
+
+.key.key-present {
+  background: var(--accent-yellow);
+  border-color: var(--accent-yellow);
+  color: #000;
+}
+
+.key.key-absent {
+  background: rgba(255,255,255,0.03);
+  border-color: rgba(255,255,255,0.06);
+  color: var(--mute-dark);
+}
+
+/* ════════════════════════════════════════════════════════════
+   CONNECTOME VIEWPORT (right panel)
+════════════════════════════════════════════════════════════ */
+#connectome-container {
+  flex: 1;
+  position: relative;
+  min-height: 320px;
+  background: #050608;
+  overflow: hidden;
+}
+
+/* Dopamine radial pulse overlay */
+.dopamine-flare {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(circle at 50% 50%,
+    rgba(255,42,95,0.38) 0%,
+    rgba(255,42,95,0.08) 45%,
+    transparent 70%);
+  transition: opacity 0.25s ease;
+}
+.dopamine-flare.active { opacity: 1; }
+
+/* ─── Brain legend (hairline-dark band, caption-sm) ─── */
+.brain-legend {
+  padding: var(--sp-xs) var(--sp-lg);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-sm);
+  border-top: 1px solid var(--hairline-dark);
+  background: var(--surface-dark-card);
+  flex-shrink: 0;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--mute-dark);
+  letter-spacing: 0;
+}
+
+/* Legend colour dots */
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.dot-optic    { background: var(--accent-cyan);    box-shadow: 0 0 6px var(--accent-cyan); }
+.dot-central  { background: #ffaa00;               box-shadow: 0 0 6px #ffaa00; }
+.dot-sensory  { background: #00ff88;               box-shadow: 0 0 6px #00ff88; }
+.dot-dopamine { background: var(--accent-dopamine); box-shadow: 0 0 6px var(--accent-dopamine); }
+.dot-motor    { background: #d400ff;               box-shadow: 0 0 6px #d400ff; }
+
+/* ════════════════════════════════════════════════════════════
+   TELEMETRY BAR (right panel — 4-up metrics grid)
+════════════════════════════════════════════════════════════ */
+.telemetry-bar {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  border-top: 1px solid var(--hairline-dark);
+  background: var(--surface-dark-elevated);
+  flex-shrink: 0;
+}
+
+.telemetry-item {
+  padding: 14px var(--sp-sm);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  border-right: 1px solid var(--hairline-dark);
+  transition: background 0.2s;
+}
+.telemetry-item:last-child { border-right: none; }
+.telemetry-item:hover { background: rgba(255,255,255,0.03); }
+
+/* metric-val — heading-md weight 600 */
+.metric-val {
+  font-family: var(--font-mono);
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0;
+  color: var(--on-dark);
+}
+
+/* metric-label — caption-sm */
+.metric-label {
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  color: var(--mute-dark);
+  text-transform: uppercase;
+}
+
+/* ════════════════════════════════════════════════════════════
+   SCIENCE & BENCHMARK CARD (right panel — ps-plus-banner style)
+════════════════════════════════════════════════════════════ */
+.science-card {
+  padding: var(--sp-md) var(--sp-lg);
+  background: var(--surface-dark-elevated);
+  border-top: 1px solid var(--hairline-dark);
+
+  /* Gold-bar top accent repurposed as a PS Blue accent */
+  border-left: 3px solid var(--ps-blue);
+
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.6;
+  color: var(--body-dark);
+  flex-shrink: 0;
+}
+
+.science-card strong {
+  color: var(--on-dark);
+  font-weight: 600;
+}
+
+/* Benchmark stats — 4-up grid */
+.benchmark-summary {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--sp-xs);
+  margin-top: var(--sp-sm);
+  padding-top: var(--sp-sm);
+  border-top: 1px solid var(--hairline-dark);
+}
+
+.bench-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.bench-num {
+  font-family: var(--font-mono);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--link-dark);   /* #53b1ff — link-dark for dark canvas */
+}
+
+.bench-lbl {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--mute-dark);
+  letter-spacing: 0.04em;
+  text-align: center;
+}
+
+/* ════════════════════════════════════════════════════════════
+   WINNER MODAL / OVERLAY (hero-band-dark style, full-bleed)
+════════════════════════════════════════════════════════════ */
+#result-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.88);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  z-index: 999;
+  align-items: center;
+  justify-content: center;
+}
+#result-overlay.visible { display: flex; }
+
+.result-card {
+  background: var(--surface-dark-elevated);
+  border: 1px solid var(--hairline-dark);
+  border-radius: var(--r-lg);
+  padding: var(--sp-xxl) var(--sp-xl);
+  max-width: 440px;
+  width: 90%;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-md);
+  box-shadow: 0 0 60px rgba(0,112,209,0.2);
+  animation: cardPop 0.35s cubic-bezier(0.175,0.885,0.32,1.275) forwards;
+}
+
+@keyframes cardPop {
+  from { transform: scale(0.88); opacity: 0; }
+  to   { transform: scale(1); opacity: 1; }
+}
+
+.result-emoji { font-size: 56px; }
+
+/* result headline — display-md weight 300 */
+.result-headline {
+  font-family: var(--font-display);
+  font-size: 35px;
+  font-weight: 300;
+  letter-spacing: 0;
+  line-height: 1.25;
+  color: var(--on-dark);
+}
+
+.result-sub {
+  font-size: 18px;
+  font-weight: 400;
+  line-height: 1.5;
+  color: var(--body-dark);
+}
+
+/* ════════════════════════════════════════════════════════════
+   TOAST NOTIFICATIONS  (badge-info pill floating)
+════════════════════════════════════════════════════════════ */
+#toast-container {
+  position: fixed;
+  top: 72px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 500;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-xs);
+  pointer-events: none;
+}
+
+.toast {
+  background: var(--on-dark);
+  color: var(--ink-deep);
+  font-size: 14px;
+  font-weight: 700;
+  padding: 8px 20px;
+  border-radius: var(--r-full);
+  letter-spacing: 0.2px;
+  opacity: 0;
+  transform: translateY(-12px);
+  animation: toastIn 0.25s forwards, toastOut 0.3s 1.6s forwards;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+}
+
+@keyframes toastIn {
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes toastOut {
+  to { opacity: 0; transform: translateY(-8px); }
+}
+
+/* ════════════════════════════════════════════════════════════
+   RESPONSIVE  (breakpoints from design.md)
+════════════════════════════════════════════════════════════ */
+@media (max-width: 1200px) {
+  #app-container {
+    flex-direction: column;
+    height: auto;
+    overflow: auto;
+  }
+  #left-panel, #right-panel {
+    flex: 1 1 100%;
+  }
+}
+
+@media (max-width: 1024px) {
+  .connectome-spec { display: none; }
+}
+
+@media (max-width: 768px) {
+  #top-bar { padding: 0 var(--sp-md); }
+  #sub-nav  { padding: 0 var(--sp-md); gap: var(--sp-md); }
+  #app-container { padding: var(--sp-xs); }
+
+  .logo-title { font-size: 16px; }
+
+  .btn { height: 44px; padding: 10px 20px; font-size: 13px; }
+
+  .tile { width: 34px; height: 34px; font-size: 14px; }
+
+  .benchmark-summary { grid-template-columns: repeat(2, 1fr); }
+  .telemetry-bar     { grid-template-columns: repeat(2, 1fr); }
+
+  /* hero headline downscale */
+  .result-headline { font-size: 28px; }
+}
+
+@media (max-width: 480px) {
+  .logo-title { font-size: 14px; }
+  .connection-badge { display: none; }
+  .result-headline { font-size: 24px; }
+}
+
+/* ─── Scrollbar (dark canvas style) ─── */
+::-webkit-scrollbar       { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--canvas-dark); }
+::-webkit-scrollbar-thumb { background: var(--hairline-dark); border-radius: var(--r-full); }
+::-webkit-scrollbar-thumb:hover { background: rgba(229,229,229,0.35); }
+
+/* ─── Focus rings (accessibility) ─── */
+:focus-visible {
+  outline: 2px solid var(--ps-blue);
+  outline-offset: 2px;
+}

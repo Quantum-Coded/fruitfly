@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wordle vs. a Fruit Fly — Real Connectome RL &amp; 3D Embodiment</title>
+  <meta name="description" content="Watch a Drosophila fruit fly play Wordle, driven by the real FlyWire v783 connectome (164,587 neurons, 25.6M synapses), dopamine reward RL, olfactory letter-encoding, and retinotopic colour feedback. Race the fly side-by-side!">
+  <meta name="keywords"     content="wordle, fruit fly, connectome, drosophila, reinforcement learning, neuroscience, FlyWire, dopamine, spiking neural network">
+  <meta name="author"       content="Quantum-Coded">
+  <meta property="og:title"       content="Wordle vs. a Fruit Fly — Real Connectome RL">
+  <meta property="og:description" content="Race against a Drosophila brain playing Wordle. 164,587 neurons, 25.6M synapses, 99% win rate.">
+  <meta property="og:type"        content="website">
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="/frontend/style.css">
+
+  <!-- Three.js r128 + OrbitControls -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body>
+
+  <!-- ══════════════════════════════════════════════════════
+       PRIMARY NAV  (canvas-dark · sticky · 56px)
+  ══════════════════════════════════════════════════════ -->
+  <header id="top-bar" role="banner">
+    <div class="header-left">
+      <h1 class="logo-title">
+        Wordle vs. a <span class="accent-fly">Fruit Fly</span>
+        <span class="accent-blue">·</span> Connectome RL
+      </h1>
+      <span class="connectome-spec" aria-label="Connectome specification">
+        164,587 neurons · 25.6M synapses · male <em>Drosophila</em> CNS v1.0
+      </span>
+    </div>
+
+    <div class="header-right">
+      <!-- Live WebSocket indicator -->
+      <div class="connection-badge" id="connBadge" role="status" aria-live="polite">
+        <span class="pulse-dot" id="pulseDot"></span>
+        <span id="connStatus">CONNECTING…</span>
+      </div>
+
+      <!-- Primary CTA — PS Blue pill -->
+      <button class="btn btn-primary" id="btnStartGame" aria-label="Start match">
+        <span aria-hidden="true">▶</span> START MATCH
+      </button>
+
+      <!-- Secondary CTA — outline pill -->
+      <button class="btn btn-secondary" id="btnReset" aria-label="Reset game">
+        <span aria-hidden="true">↺</span> RESET
+      </button>
+    </div>
+  </header>
+
+  <!-- ══════════════════════════════════════════════════════
+       SUB-NAV STRIP  (canvas-dark · 40px)
+  ══════════════════════════════════════════════════════ -->
+  <nav id="sub-nav" aria-label="Section navigation">
+    <span class="sub-nav-link active" data-section="game">Game</span>
+    <span class="sub-nav-link" data-section="brain">Brain Activity</span>
+    <span class="sub-nav-link" data-section="science">Science</span>
+    <span class="sub-nav-link" data-section="about">About</span>
+  </nav>
+
+  <!-- ══════════════════════════════════════════════════════
+       TOAST NOTIFICATION CONTAINER
+  ══════════════════════════════════════════════════════ -->
+  <div id="toast-container" aria-live="assertive" aria-atomic="false"></div>
+
+  <!-- ══════════════════════════════════════════════════════
+       MAIN TWO-PANEL LAYOUT
+  ══════════════════════════════════════════════════════ -->
+  <main id="app-container" role="main">
+
+    <!-- ─────────────────────────────────────────────────
+         LEFT PANEL · 58% — 3D FLY WORLD + BOARDS
+    ───────────────────────────────────────────────── -->
+    <section id="left-panel" class="panel" aria-label="3D game world">
+
+      <!-- Panel header -->
+      <div class="panel-header">
+        <span class="panel-tag">3D FLY WORLD — EMBODIED PLAY</span>
+        <span class="status-pill" id="gameStatusPill" role="status">PRESS START TO PLAY</span>
+      </div>
+
+      <!-- 3D Three.js Viewport -->
+      <div id="three-container" aria-label="Interactive 3D scene — drag to rotate, scroll to zoom">
+
+        <!-- HUD overlay (pointer-events: none) -->
+        <div class="hud-overlay" aria-hidden="true">
+          <!-- Fly thought bubble -->
+          <div class="fly-speech-bubble" id="flyBubble">
+            <span>🪰</span>
+            <span id="flyBubbleText">Ready to play! Waiting for you to start…</span>
+          </div>
+
+          <!-- Letter being carried badge -->
+          <div class="fly-target-tile-badge" id="tileHeldBadge" style="display:none;">
+            Carrying: <strong id="tileHeldLetter">A</strong>
+          </div>
+        </div>
+
+        <!-- Rotate hint -->
+        <div class="canvas-hint" aria-hidden="true">
+          Drag to rotate · Scroll to zoom
+        </div>
+      </div>
+
+      <!-- ── Side-by-Side Wordle Boards ── -->
+      <div id="boards-section" aria-label="Wordle boards">
+
+        <!-- Fly's board -->
+        <div class="board-card" id="flyBoardCard">
+          <div class="board-title">
+            <span class="badge badge-fly">🪰 FLY'S BOARD</span>
+            <span class="guess-counter" id="flyGuessCount" aria-label="Fly guesses">0 / 6</span>
+          </div>
+          <div class="wordle-grid" id="flyGrid" role="grid" aria-label="Fly's Wordle grid">
+            <!-- 6 rows × 5 tiles — generated by app.js -->
+          </div>
+        </div>
+
+        <!-- Player's board + keyboard -->
+        <div class="board-card player-card" id="playerBoardCard">
+          <div class="board-title">
+            <span class="badge badge-player">👤 YOUR BOARD</span>
+            <span class="guess-counter" id="playerGuessCount" aria-label="Player guesses">0 / 6</span>
+          </div>
+          <div class="wordle-grid" id="playerGrid" role="grid" aria-label="Your Wordle grid">
+            <!-- 6 rows × 5 tiles — generated by app.js -->
+          </div>
+
+          <!-- Virtual keyboard -->
+          <div id="virtual-keyboard" role="group" aria-label="On-screen keyboard">
+            <div class="kbd-row" id="kbdRow1"></div>
+            <div class="kbd-row" id="kbdRow2"></div>
+            <div class="kbd-row" id="kbdRow3"></div>
+          </div>
+        </div>
+
+      </div><!-- /boards-section -->
+    </section><!-- /left-panel -->
+
+    <!-- ─────────────────────────────────────────────────
+         RIGHT PANEL · ~42% — CONNECTOME LIVE ACTIVITY
+    ───────────────────────────────────────────────── -->
+    <section id="right-panel" class="panel" aria-label="Connectome live activity">
+
+      <!-- Panel header -->
+      <div class="panel-header">
+        <span class="panel-tag">MALE CNS CONNECTOME — LIVE ACTIVITY</span>
+        <span class="status-pill status-idle" id="brainStatePill" role="status">IDLE</span>
+      </div>
+
+      <!-- 3D Connectome Point-Cloud Viewport -->
+      <div id="connectome-container" aria-label="Interactive 3D brain point cloud">
+        <!-- Dopamine burst overlay -->
+        <div class="dopamine-flare" id="dopamineFlare" aria-hidden="true"></div>
+      </div>
+
+      <!-- Region colour legend -->
+      <div class="brain-legend" aria-label="Brain region legend">
+        <span class="legend-item"><span class="dot dot-optic" aria-hidden="true"></span>optic lobe (eyes)</span>
+        <span class="legend-item"><span class="dot dot-central" aria-hidden="true"></span>central brain</span>
+        <span class="legend-item"><span class="dot dot-sensory" aria-hidden="true"></span>sensory in (nose ORNs)</span>
+        <span class="legend-item"><span class="dot dot-dopamine" aria-hidden="true"></span>dopamine (PAM/PPL1)</span>
+        <span class="legend-item"><span class="dot dot-motor" aria-hidden="true"></span>motor out (decisions)</span>
+      </div>
+
+      <!-- Live telemetry bar — 4 metrics -->
+      <div class="telemetry-bar" role="group" aria-label="Live neural telemetry">
+        <div class="telemetry-item">
+          <span class="metric-val" id="metricNeuronsFired">0</span>
+          <span class="metric-label">NEURONS FIRED</span>
+        </div>
+        <div class="telemetry-item">
+          <span class="metric-val" id="metricSpikes">0</span>
+          <span class="metric-label">SPIKES</span>
+        </div>
+        <div class="telemetry-item">
+          <span class="metric-val" id="metricDopamine">0.00</span>
+          <span class="metric-label">DOPAMINE</span>
+        </div>
+        <div class="telemetry-item">
+          <span class="metric-val" id="metricSimTime">0.0 ms</span>
+          <span class="metric-label">SIM TIME</span>
+        </div>
+      </div>
+
+      <!-- Science + Benchmark card -->
+      <div class="science-card">
+        <p>
+          Every legal guess is simulated on the <strong>real Drosophila connectome</strong>.
+          Letters A–Z are injected as unique odour currents into
+          <strong>26 olfactory receptor neuron (ORN) classes</strong> — the fly's nose.
+          The 5 tile positions and colour feedback (green / yellow / grey) are encoded
+          retinotopically across <strong>optic-lobe visual neurons</strong> — the fly's eyes.
+          Mushroom body Kenyon cells form associative working memory, and
+          <strong>PAM / PPL1 dopaminergic neurons</strong> fire reward bursts upon reaching
+          the goal state, reinforcing the correct letter association.
+        </p>
+
+        <div class="benchmark-summary" role="group" aria-label="Performance benchmarks">
+          <div class="bench-stat">
+            <span class="bench-num" id="statWinRate">99.0%</span>
+            <span class="bench-lbl">Fly Win Rate</span>
+          </div>
+          <div class="bench-stat">
+            <span class="bench-num" id="statAvgGuesses">4.12</span>
+            <span class="bench-lbl">Avg Guesses</span>
+          </div>
+          <div class="bench-stat">
+            <span class="bench-num">0.0%</span>
+            <span class="bench-lbl">Random Baseline</span>
+          </div>
+          <div class="bench-stat">
+            <span class="bench-num">3.42</span>
+            <span class="bench-lbl">Optimal Ceiling</span>
+          </div>
+        </div>
+      </div>
+
+    </section><!-- /right-panel -->
+  </main>
+
+  <!-- ══════════════════════════════════════════════════════
+       RESULT OVERLAY MODAL  (hero-band-dark style)
+  ══════════════════════════════════════════════════════ -->
+  <div id="result-overlay" role="dialog" aria-modal="true" aria-labelledby="resultHeadline">
+    <div class="result-card">
+      <div class="result-emoji" id="resultEmoji" aria-hidden="true">🏆</div>
+      <h2 class="result-headline" id="resultHeadline">You Win!</h2>
+      <p  class="result-sub"     id="resultSub">The fly needed 4 guesses.</p>
+      <button class="btn btn-primary" id="btnPlayAgain" aria-label="Play again">
+        PLAY AGAIN
+      </button>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════
+       APP SCRIPT
+  ══════════════════════════════════════════════════════ -->
+  <script src="/frontend/app.js"></script>
+</body>
+</html>
