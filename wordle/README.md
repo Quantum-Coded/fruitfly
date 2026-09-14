@@ -1,4 +1,4 @@
-# 🪰 Wordle vs. a Fruit Fly — Real Connectome Reinforcement Learning
+# 🪰 Wordle vs. a Fruit Fly — Real Connectome Reservoir Computing + RL
 
 > A fruit fly solves Wordle using its **actual brain**.  
 > Built on the [FlyWire v783 male CNS connectome](https://flywire.ai/) (164,587 neurons, 25.6M synapses, 2024) mapped by Google DeepMind & the Princeton FlyWire team.
@@ -7,7 +7,7 @@
 
 ## What This Is
 
-This project hooks Google's newly released whole-brain wiring diagram of a *Drosophila melanogaster* (fruit fly) into a Wordle solver via **biologically-plausible reinforcement learning**. The fly doesn't run a lookup table or a language model. It uses its own connectome as a feature extractor and learns to guess 5-letter words through dopamine-mediated reward signals — the same way a real fly learns to avoid a hot plate.
+This project hooks Google's newly released whole-brain wiring diagram of a *Drosophila melanogaster* (fruit fly) into a Wordle solver via **reservoir computing with reinforcement learning**. The fly doesn't run a lookup table or a language model. The real connectome acts as a **frozen biological reservoir** (a spiking neural feature extractor), and a small trainable MLP readout layer on top is trained via **REINFORCE policy gradient** (RL + backpropagation) to decode the fly's motor neuron spike patterns into word choices.
 
 You can race the fly side-by-side. Both you and the fly receive **different** random 5-letter words each round.
 
@@ -153,11 +153,13 @@ At the end of each epoch, the 5 **descending motor neuron** spike counts are rea
 
 ---
 
-## Reinforcement Learning
+## Learning Approach: Reservoir Computing + RL
+
+This project uses a **reservoir computing** paradigm: the biological connectome is a fixed, non-learning spiking reservoir that transforms sensory inputs into rich spatiotemporal spike patterns. A separate trainable readout layer decodes these patterns into actions. The readout is trained via **REINFORCE policy gradient** (an RL algorithm) using **backpropagation** to compute weight updates. The connectome synapses are never modified.
 
 ### Algorithm
 
-**Policy Gradient (REINFORCE)** with a biologically-motivated reward shaping:
+**Policy Gradient (REINFORCE)** with reward shaping:
 
 | Event | Reward |
 |-------|--------|
@@ -174,9 +176,9 @@ The MLP readout head scores every word in the candidate set (filtered by the con
 The connectome itself is **not modified**. What changes:
 1. A **linear projection layer** maps the 26+5 sensory currents down to the 13 descending input channels that feed the selected sub-circuit neurons. This projection is learned.
 2. A **three-layer MLP readout** (13 → 64 → 32 → 1) converts motor neuron firing rates into word scores. This is learned.
-3. The **dopamine DANs** (PAM / PPL1) receive an externally-injected reward current proportional to the shaped reward signal, simulating neuromodulatory gating of mushroom body plasticity.
+3. The **dopamine DANs** (PAM / PPL1) receive an externally-injected reward current proportional to the shaped reward signal. This activates the biological dopamine neurons for **visualization and telemetry purposes** (the 3D brain viewer shows them spiking on win/loss), but does not modify any synaptic weights. The actual learning is performed entirely by backpropagation through the MLP readout layer.
 
-This mirrors how optogenetic or thermogenetic experiments activate DANs externally while keeping the rest of the connectome intact.
+> **Note:** In a real fly, these same dopamine neurons would gate synaptic plasticity in the mushroom body via three-factor STDP. Implementing true dopamine-gated synaptic plasticity within the spiking simulation is a future direction.
 
 ### Training
 
